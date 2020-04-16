@@ -8,9 +8,7 @@ on:
 
 jobs:
   build-ubuntu:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Build
@@ -21,10 +19,9 @@ jobs:
         name: gh-actions-secrets_ubuntu
         path: target/release/gh-actions-secrets
 
+
   build-macos:
-
     runs-on: macos-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Build
@@ -36,9 +33,7 @@ jobs:
         path: target/release/gh-actions-secrets
         
   build-windows:
-
     runs-on: windows-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Build
@@ -46,6 +41,5 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v1
       with:
-        name: gh-actions-secrets_windows
-        path: target/release/gh-actions-secrets 
-
+        name: gh-actions-secrets_windows.exe
+        path: target\release\gh-actions-secrets.exe
