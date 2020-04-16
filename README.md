@@ -24,18 +24,28 @@ OPTIONS:
 Example - Add new secret to Github actions secrets
 
 ```
-gh-actions-secret --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --repo_owner aslamplr --repo_name gh-actions-secret --action add --secret_key SECRET_KEY --secret_value SECRET_VALUE_XYZ_BLAH_BLAH
+gh-actions-secrets --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --repo_owner aslamplr --repo_name gh-actions-secrets --action add --secret_key SECRET_KEY --secret_value SECRET_VALUE_XYZ_BLAH_BLAH
 ```
 
 Example - List all secrets
 
 ```
-gh-actions-secret --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --repo_owner aslamplr --repo_name gh-actions-secret --action list
+gh-actions-secrets --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --repo_owner aslamplr --repo_name gh-actions-secrets --action list
 ```
 
 ### Requirements for development
 
 - Rust (rustc 1.42.0)
 
+### Run 
 
+```
+cargo run -- --help
+```
+
+### Build (release)
+
+```
+cargo build --release
+```
 
