@@ -1,9 +1,9 @@
 use base64;
 use bytes::buf::BufExt;
-use crypto_box::{aead::Aead, Box, PublicKey, SecretKey};
 use hyper::{Client, Request};
 use hyper_tls::HttpsConnector;
 use serde::{Deserialize, Serialize};
+use sodiumoxide::crypto;
 
 type Result<T> = std::result::Result<T, std::boxed::Box<dyn std::error::Error + Send + Sync>>;
 
@@ -94,7 +94,7 @@ async fn main() -> Result<()> {
       println!("Secret:\n\n{}", secret);
     }
     (Some("add"), Some(secret_key), Some(secret_value))
-    | (Some("edit"), Some(secret_key), Some(secret_value)) => {
+    | (Some("update"), Some(secret_key), Some(secret_value)) => {
       repo.save_secret(secret_key, secret_value).await?;
     }
     (Some("delete"), Some(secret_key), _) => {
@@ -105,11 +105,13 @@ async fn main() -> Result<()> {
   Ok(())
 }
 
+#[derive(Debug)]
 struct Repo<'a> {
   repo_owner: &'a str,
   repo_name: &'a str,
 }
 
+#[derive(Debug)]
 struct ReposRequestParams<'a>(Repo<'a>, &'a str);
 
 impl<'a> ReposRequestParams<'a> {
@@ -321,30 +323,11 @@ fn create_request(auth_token: &str) -> hyper::http::request::Builder {
 }
 
 fn seal(message: &str, public_key_base64: &str) -> Result<String> {
-  let mut rng = rand::thread_rng();
-  let secret_key = SecretKey::generate(&mut rng);
-
   let public_key = base64::decode(public_key_base64)?;
+  let public_key = crypto::box_::curve25519xsalsa20poly1305::PublicKey::from_slice(&public_key)
+    .ok_or("unable to create public key object")?;
 
-  let public_key_buffer =
-    public_key[..32]
-      .iter()
-      .enumerate()
-      .fold([0u8; 32], |mut buffer, (i, n)| {
-        buffer[i] = *n;
-        buffer
-      });
-
-  let public_key = PublicKey::from(public_key_buffer);
-
-  let boxed_secret = Box::new(&public_key, &secret_key);
-  let nonce = crypto_box::generate_nonce(&mut rng);
-
-  match boxed_secret.encrypt(&nonce, message.as_bytes()) {
-    Ok(cipher_text) => {
-      let t = base64::encode(&cipher_text);
-      Ok(t)
-    }
-    Err(e) => Err(format!("[Error] unable to encypt: {:?}", e).into()),
-  }
+  let sealed_box = crypto::sealedbox::seal(message.as_bytes(), &public_key);
+  let sealed_box_base64 = base64::encode(&sealed_box);
+  Ok(sealed_box_base64)
 }
