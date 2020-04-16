@@ -16,7 +16,8 @@ jobs:
     - name: Secret test
       env: 
         SECRET_KEY_1: ${{ secrets.SECRET_KEY_1 }}
-      run: echo ${SECRET_KEY_1}
+      run: echo $SECRET_KEY_1 > value.txt
+    - run: cat value.txt
     - name: Build
       run: cargo build --release --verbose
     - name: Upload build artifact
