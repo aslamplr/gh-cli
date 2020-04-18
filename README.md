@@ -1,12 +1,14 @@
 # gh-actions-secrets
 
-[🗃 » Download the latest relase «](https://github.com/aslamplr/gh-actions-secrets/releases)
+[🗃 » Download the latest release «](https://github.com/aslamplr/gh-actions-secrets/releases)
 
 
 ```
-Github Actions Secret - CLI (Unofficial) 0.1.0
+GitHub Actions Secrets - CLI (Un-official) v0.2.1
 Aslam Ahammed A. <aslamplr@gmail.com>
-Deal with Github actions secrets
+CLI tool to deal with GitHub Actions Secrets API.
+Minimalistic and Opinionated, un-official by default.
+Absolute No Warranty!
 
 USAGE:
     gh-actions-secrets [OPTIONS] --action <ACTION> --auth_token <PERSONAL_ACCESS_TOKEN> --repo_name <REPO_NAME> --repo_owner <REPO_OWNER>

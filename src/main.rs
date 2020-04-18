@@ -2,10 +2,10 @@ use gh_actions_secrets::{core::repos::ReposRequestParams, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let matches = clap::App::new("Github Actions Secret - CLI (Unofficial)")
-        .version("0.1.0")
+    let matches = clap::App::new("GitHub Actions Secrets - CLI (Un-official)")
+        .version("v0.2.1")
         .author("Aslam Ahammed A. <aslamplr@gmail.com>")
-        .about("Deal with Github actions secrets")
+        .about("CLI tool to deal with GitHub Actions Secrets API.\nMinimalistic and Opinionated, un-official by default.\nAbsolute No Warranty!")
         .arg(
             clap::Arg::with_name("repo_owner")
                 .long("repo_owner")
