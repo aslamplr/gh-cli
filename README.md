@@ -1,5 +1,8 @@
 # gh-actions-secrets
 
+[🗃 » Download the latest relase «](https://github.com/aslamplr/gh-actions-secrets/releases)
+
+
 ```
 Github Actions Secret - CLI (Unofficial) 0.1.0
 Aslam Ahammed A. <aslamplr@gmail.com>
