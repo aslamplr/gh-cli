@@ -1,15 +1,15 @@
 use super::repos::{Repo, ReposRequestParams};
+use crate::utils::http::request;
 use crate::{
     utils::{
-        http::{create_https_client, create_request},
+        http::{HttpBody, HttpMethod},
         sealed_box::seal,
     },
     Result,
 };
-use bytes::buf::BufExt;
 use serde::{Deserialize, Serialize};
 
-impl<'a> ReposRequestParams<'a> {
+impl ReposRequestParams<'_> {
     pub async fn get_public_key(&self) -> Result<PublicKeyResponse> {
         get_public_key(&self).await
     }
@@ -109,25 +109,13 @@ where
         repo_owner,
         repo_name,
     } = repo;
-    let uri = format!(
+    let url = format!(
         "https://api.github.com/repos/{}/{}/{}",
         repo_owner, repo_name, path
-    )
-    .parse::<hyper::Uri>()
-    .unwrap();
-    let client = create_https_client();
-    let req = create_request(auth_token)
-        .method(hyper::Method::GET)
-        .uri(uri)
-        .body(hyper::Body::empty())?;
-
-    let res = client.request(req).await?;
-
-    let body = hyper::body::aggregate(res).await?;
-
-    let secret_list = serde_json::from_reader(body.reader())?;
-
-    Ok(secret_list)
+    );
+    let resp = request(&url, HttpMethod::GET, HttpBody::empty(), &auth_token).await?;
+    let resp = resp.deserialize().await?;
+    Ok(resp)
 }
 
 async fn get_public_key(params: &ReposRequestParams<'_>) -> Result<PublicKeyResponse> {
@@ -152,19 +140,17 @@ async fn put_gh_secret(
         repo_owner,
         repo_name,
     } = repo;
-    let uri = format!(
+    let url = format!(
         "https://api.github.com/repos/{}/{}/actions/secrets/{}",
         repo_owner, repo_name, secret_key
+    );
+    let res = request(
+        &url,
+        HttpMethod::PUT,
+        HttpBody::try_from_serialize(&secret_save_req)?,
+        auth_token,
     )
-    .parse::<hyper::Uri>()
-    .unwrap();
-    let body = serde_json::to_string(&secret_save_req)?;
-    let client = create_https_client();
-    let req = create_request(auth_token)
-        .method(hyper::Method::PUT)
-        .uri(uri)
-        .body(hyper::Body::from(body))?;
-    let res = client.request(req).await?;
+    .await?;
     println!("Response: {}", res.status());
     Ok(())
 }
@@ -175,18 +161,11 @@ async fn delete_a_secret(params: &ReposRequestParams<'_>, secret_key: &str) -> R
         repo_owner,
         repo_name,
     } = repo;
-    let uri = format!(
+    let url = format!(
         "https://api.github.com/repos/{}/{}/actions/secrets/{}",
         repo_owner, repo_name, secret_key
-    )
-    .parse::<hyper::Uri>()
-    .unwrap();
-    let client = create_https_client();
-    let req = create_request(auth_token)
-        .method(hyper::Method::DELETE)
-        .uri(uri)
-        .body(hyper::Body::empty())?;
-    let res = client.request(req).await?;
+    );
+    let res = request(&url, HttpMethod::DELETE, HttpBody::empty(), &auth_token).await?;
     println!("Response: {}", res.status());
     Ok(())
 }
