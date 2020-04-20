@@ -1,8 +1,7 @@
 use super::repos::{Repo, ReposRequestParams};
-use crate::utils::http::request;
 use crate::{
     utils::{
-        http::{HttpBody, HttpMethod},
+        http::{delete, get, put, HttpBody},
         sealed_box::seal,
     },
     Result,
@@ -113,7 +112,7 @@ where
         "https://api.github.com/repos/{}/{}/{}",
         repo_owner, repo_name, path
     );
-    let resp = request(&url, HttpMethod::GET, HttpBody::empty(), &auth_token).await?;
+    let resp = get(&url, &auth_token).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
@@ -144,9 +143,8 @@ async fn put_gh_secret(
         "https://api.github.com/repos/{}/{}/actions/secrets/{}",
         repo_owner, repo_name, secret_key
     );
-    let res = request(
+    let res = put(
         &url,
-        HttpMethod::PUT,
         HttpBody::try_from_serialize(&secret_save_req)?,
         auth_token,
     )
@@ -165,7 +163,7 @@ async fn delete_a_secret(params: &ReposRequestParams<'_>, secret_key: &str) -> R
         "https://api.github.com/repos/{}/{}/actions/secrets/{}",
         repo_owner, repo_name, secret_key
     );
-    let res = request(&url, HttpMethod::DELETE, HttpBody::empty(), &auth_token).await?;
+    let res = delete(&url, &auth_token).await?;
     println!("Response: {}", res.status());
     Ok(())
 }

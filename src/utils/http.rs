@@ -1,13 +1,19 @@
 use crate::Result;
 use bytes::buf::BufExt;
 pub use hyper::Method as HttpMethod;
-use hyper::{body::aggregate, http::response::Response, Body, Client, Request, Uri};
+use hyper::{
+    body::aggregate,
+    http::{request::Builder, response::Response},
+    Body, Client, Request, Uri,
+};
 use hyper_tls::HttpsConnector;
 
-fn create_https_client(
-) -> hyper::client::Client<HttpsConnector<hyper::client::connect::HttpConnector>, hyper::Body> {
+type HttpsClient =
+    hyper::client::Client<HttpsConnector<hyper::client::connect::HttpConnector>, hyper::Body>;
+
+fn create_https_client() -> HttpsClient {
     let https = HttpsConnector::new();
-    Client::builder().build::<_, hyper::Body>(https)
+    Client::builder().build(https)
 }
 
 fn create_request(auth_token: &str) -> hyper::http::request::Builder {
@@ -62,19 +68,83 @@ impl HttpResponse {
     }
 }
 
-pub async fn request(
-    url: &str,
-    method: HttpMethod,
-    body: HttpBody,
-    auth_token: &str,
-) -> Result<HttpResponse> {
+pub struct HttpRequest {
+    client: HttpsClient,
+    request: Request<hyper::Body>,
+}
+
+impl HttpRequest {
+    pub fn from(client: HttpsClient, request: Request<hyper::Body>) -> Self {
+        HttpRequest { client, request }
+    }
+
+    pub async fn call(self) -> Result<HttpResponse> {
+        let res = self.client.request(self.request).await?;
+        Ok(HttpResponse::from(res))
+    }
+}
+
+pub struct HttpRequestBuilder {
+    client: HttpsClient,
+    builder: Builder,
+}
+
+impl HttpRequestBuilder {
+    pub fn from(client: HttpsClient, builder: Builder) -> Self {
+        Self { client, builder }
+    }
+
+    pub fn _header(self, key: &str, value: &str) -> Self {
+        let builder = self.builder.header(key, value);
+        Self { builder, ..self }
+    }
+
+    pub fn body(self, body: HttpBody) -> Result<HttpRequest> {
+        let request = self.builder.body(body.inner)?;
+        Ok(HttpRequest::from(self.client, request))
+    }
+
+    pub async fn call(self) -> Result<HttpResponse> {
+        self.body(HttpBody::empty())?.call().await
+    }
+}
+
+pub fn request(url: &str, method: HttpMethod, auth_token: &str) -> HttpRequestBuilder {
     let uri = url.parse::<Uri>().unwrap();
     let client = create_https_client();
-    let req = create_request(auth_token)
-        .method(method)
-        .uri(uri)
-        .body(body.inner)?;
-    let res = client.request(req).await?;
-    let res = HttpResponse::from(res);
-    Ok(res)
+    let builder = create_request(auth_token).method(method).uri(uri);
+    HttpRequestBuilder::from(client, builder)
+}
+
+pub async fn get(url: &str, auth_token: &str) -> Result<HttpResponse> {
+    request(&url, HttpMethod::GET, &auth_token).call().await
+}
+
+pub async fn _post(url: &str, body: HttpBody, auth_token: &str) -> Result<HttpResponse> {
+    request(&url, HttpMethod::POST, &auth_token)
+        .body(body)?
+        .call()
+        .await
+}
+
+pub async fn put(url: &str, body: HttpBody, auth_token: &str) -> Result<HttpResponse> {
+    request(&url, HttpMethod::PUT, &auth_token)
+        .body(body)?
+        .call()
+        .await
+}
+
+pub async fn _patch(url: &str, body: HttpBody, auth_token: &str) -> Result<HttpResponse> {
+    request(&url, HttpMethod::PATCH, &auth_token)
+        .body(body)?
+        .call()
+        .await
+}
+
+pub async fn delete(url: &str, auth_token: &str) -> Result<HttpResponse> {
+    request(&url, HttpMethod::DELETE, &auth_token).call().await
+}
+
+pub async fn _options(url: &str, auth_token: &str) -> Result<HttpResponse> {
+    request(&url, HttpMethod::OPTIONS, &auth_token).call().await
 }
