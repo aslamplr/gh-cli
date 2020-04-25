@@ -8,6 +8,8 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+const BASE_URL: &str = "https://api.github.com/repos";
+
 impl ReposRequestParams<'_> {
     pub async fn get_public_key(&self) -> Result<PublicKeyResponse> {
         get_public_key(&self).await
@@ -108,10 +110,7 @@ where
         repo_owner,
         repo_name,
     } = repo;
-    let url = format!(
-        "https://api.github.com/repos/{}/{}/{}",
-        repo_owner, repo_name, path
-    );
+    let url = format!("{}/{}/{}/{}", BASE_URL, repo_owner, repo_name, path);
     let resp = get(&url, &auth_token).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
@@ -140,8 +139,8 @@ async fn put_gh_secret(
         repo_name,
     } = repo;
     let url = format!(
-        "https://api.github.com/repos/{}/{}/actions/secrets/{}",
-        repo_owner, repo_name, secret_key
+        "{}/{}/{}/actions/secrets/{}",
+        BASE_URL, repo_owner, repo_name, secret_key
     );
     let res = put(
         &url,
@@ -160,8 +159,8 @@ async fn delete_a_secret(params: &ReposRequestParams<'_>, secret_key: &str) -> R
         repo_name,
     } = repo;
     let url = format!(
-        "https://api.github.com/repos/{}/{}/actions/secrets/{}",
-        repo_owner, repo_name, secret_key
+        "{}/{}/{}/actions/secrets/{}",
+        BASE_URL, repo_owner, repo_name, secret_key
     );
     let res = delete(&url, &auth_token).await?;
     println!("Response: {}", res.status());
