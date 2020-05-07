@@ -1,5 +1,5 @@
 use clap::Clap;
-use gh_cli::{core::repos::ReposRequestParams, Result};
+use gh_cli::core::repos::ReposRequestParams;
 
 #[derive(Clap)]
 #[clap(
@@ -73,7 +73,7 @@ struct Secrets {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     let opts: Opts = Opts::parse();
 
     match opts.subcmd {

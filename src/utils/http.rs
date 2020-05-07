@@ -1,5 +1,5 @@
-use crate::Result;
-use bytes::buf::BufExt;
+use anyhow::{anyhow, Result};
+use bytes::buf::{BufExt, Buf};
 pub use hyper::Method as HttpMethod;
 use hyper::{
     body::aggregate,
@@ -54,17 +54,32 @@ impl HttpResponse {
         }
     }
 
+    async fn aggregate(self) -> Result<impl Buf> {
+        Ok(aggregate(self.inner).await?)
+    }
+
     pub async fn deserialize<T>(self) -> Result<T>
     where
         T: serde::de::DeserializeOwned,
     {
-        let body = aggregate(self.inner).await?;
-        let body = serde_json::from_reader(body.reader())?;
-        Ok(body)
+        let status = self.status();
+        let body = self.aggregate().await?;
+        if status.is_success() {
+            let body = serde_json::from_reader(body.reader())?;
+            Ok(body)
+        } else {
+            let body = std::str::from_utf8(body.bytes())?;
+            Err(anyhow!("[{}] {}", status, body))
+        }
     }
 
-    pub fn status(self) -> hyper::StatusCode {
+    pub fn status(&self) -> hyper::StatusCode {
         self.inner.status()
+    }
+
+    pub async fn _body(self) -> Result<String> {
+        let body = self.aggregate().await?;
+        Ok(std::str::from_utf8(body.bytes())?.into())
     }
 }
 

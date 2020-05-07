@@ -1,11 +1,9 @@
 use super::repos::{Repo, ReposRequestParams};
-use crate::{
-    utils::{
-        http::{delete, get, put, HttpBody},
-        sealed_box::seal,
-    },
-    Result,
+use crate::utils::{
+    http::{delete, get, put, HttpBody},
+    sealed_box::seal,
 };
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 const BASE_URL: &str = "https://api.github.com/repos";

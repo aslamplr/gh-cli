@@ -9,6 +9,7 @@ repository = "https://github.com/aslamplr/gh-cli"
 
 [dependencies]
 clap = "3.0.0-beta.1"
+anyhow = "1.0"
 hyper = "0.13"
 hyper-tls = "0.4.1"
 tokio = { version = "0.2", features = ["full"] }
