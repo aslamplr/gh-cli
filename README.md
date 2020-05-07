@@ -1,4 +1,5 @@
-# gh-actions-secrets
+# gh-cli 
+named `gh-actions-secrets` earlier, renamed to `gh-cli`.
 
 [🗃 » Download the latest release «](https://github.com/aslamplr/gh-actions-secrets/releases)
 
@@ -54,3 +55,6 @@ cargo run -- --help
 cargo build --release
 ```
 
+## Roadmap
+- Unofficial Github CLI 
+- Rust client library for Github API
