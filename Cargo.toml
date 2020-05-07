@@ -1,14 +1,14 @@
 [package]
-name = "gh-actions-secrets"
-version = "0.2.1"
+name = "gh-cli"
+version = "0.3.0"
 authors = ["Aslam Ahammed <aslamplr@gmail.com>"]
 edition = "2018"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/aslamplr/gh-actions-secrets"
+repository = "https://github.com/aslamplr/gh-cli"
 
 [dependencies]
-clap = "2.33.0"
+clap = "3.0.0-beta.1"
 hyper = "0.13"
 hyper-tls = "0.4.1"
 tokio = { version = "0.2", features = ["full"] }

@@ -16,8 +16,8 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v1
       with:
-        name: gh-actions-secrets_ubuntu
-        path: target/release/gh-actions-secrets
+        name: gh-cli_ubuntu
+        path: target/release/gh-cli
 
 
   build-macos:
@@ -29,8 +29,8 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v1
       with:
-        name: gh-actions-secrets_macos
-        path: target/release/gh-actions-secrets
+        name: gh-cli_macos
+        path: target/release/gh-cli
         
   build-windows:
     runs-on: windows-latest
@@ -41,5 +41,5 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v1
       with:
-        name: gh-actions-secrets_windows.exe
-        path: target\release\gh-actions-secrets.exe
+        name: gh-cli_windows.exe
+        path: target\release\gh-cli.exe

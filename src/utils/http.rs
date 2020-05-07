@@ -19,7 +19,7 @@ fn create_https_client() -> HttpsClient {
 fn create_request(auth_token: &str) -> hyper::http::request::Builder {
     Request::builder()
         .header("Authorization", format!("bearer {}", auth_token))
-        .header("User-Agent", "gh-actions-secrets-cli")
+        .header("User-Agent", "gh-cli-unofficial")
 }
 
 pub struct HttpBody {

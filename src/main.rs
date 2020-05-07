@@ -1,99 +1,114 @@
-use gh_actions_secrets::{core::repos::ReposRequestParams, Result};
+use clap::Clap;
+use gh_cli::{core::repos::ReposRequestParams, Result};
+
+#[derive(Clap)]
+#[clap(
+    name = "GitHub CLI",
+    version = "v0.3.0",
+    author = "Aslam Ahammed A. <aslamplr@gmail.com>",
+    about = r#"Yet another unofficial GitHub CLI!
+Minimalistic, opinionated, and unofficial by default.
+Work is in progress to add more subcommands.
+Absolute No Warranty!"#
+)]
+struct Opts {
+    #[clap(subcommand)]
+    subcmd: SubCommand,
+}
+
+#[derive(Clap)]
+enum SubCommand {
+    Secrets(Secrets),
+}
+
+#[derive(Clap)]
+#[clap(
+    name = "GitHub Actions Secrets CLI",
+    version = "v0.3.0",
+    author = "Aslam Ahammed A. <aslamplr@gmail.com>",
+    about = "GitHub Actions Secrets CLI wrapper for GitHub Actions Secrets API"
+)]
+struct Secrets {
+    #[clap(
+        long = "auth_token",
+        short = "t",
+        value_name = "PERSONAL_ACCESS_TOKEN",
+        about = "Generate token - https://github.com/settings/tokens",
+        display_order = 3,
+        takes_value = true,
+        required = true
+    )]
+    auth_token: String,
+    #[clap(
+        long = "repo_owner",
+        short = "o",
+        value_name = "REPO_OWNER",
+        about = "Repository owner",
+        display_order = 1,
+        takes_value = true,
+        required = true
+    )]
+    repo_owner: String,
+    #[clap(
+        long = "repo_name",
+        short = "n",
+        value_name = "REPO_NAME",
+        about = "Repository name",
+        display_order = 2,
+        takes_value = true,
+        required = true
+    )]
+    repo_name: String,
+    #[clap(long = "action", short = "a", value_name = "ACTION", possible_values = &["list", "get", "add", "update", "delete"], display_order = 4, takes_value = true, required = true)]
+    action: String,
+    #[clap(long = "secret_key", value_name = "SECRET_KEY", takes_value = true, required_ifs = &[
+        ("action", "add"),
+        ("action", "update"),
+        ("action", "get"),
+        ("action", "delete"),
+    ])]
+    secret_key: Option<String>,
+    #[clap(long = "secret_value", value_name = "SECRET_VALUE", takes_value = true, required_ifs = &[("action", "add"), ("action", "update")])]
+    secret_value: Option<String>,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let matches = clap::App::new("GitHub Actions Secrets - CLI (Un-official)")
-        .version("v0.2.1")
-        .author("Aslam Ahammed A. <aslamplr@gmail.com>")
-        .about("CLI tool to deal with GitHub Actions Secrets API.\nMinimalistic and Opinionated, un-official by default.\nAbsolute No Warranty!")
-        .arg(
-            clap::Arg::with_name("repo_owner")
-                .long("repo_owner")
-                .short("o")
-                .value_name("REPO_OWNER")
-                .help("Repository owner")
-                .display_order(1)
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            clap::Arg::with_name("repo_name")
-                .long("repo_name")
-                .short("n")
-                .value_name("REPO_NAME")
-                .help("Repository name")
-                .display_order(2)
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            clap::Arg::with_name("auth_token")
-                .long("auth_token")
-                .short("t")
-                .value_name("PERSONAL_ACCESS_TOKEN")
-                .help("Generate token - https://github.com/settings/tokens")
-                .display_order(3)
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            clap::Arg::with_name("action")
-                .long("action")
-                .short("a")
-                .value_name("ACTION")
-                .display_order(4)
-                .possible_values(&["list", "get", "add", "update", "delete"])
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            clap::Arg::with_name("secret_key")
-                .long("secret_key")
-                .value_name("SECRET_KEY")
-                .takes_value(true)
-                .required_ifs(&[
-                    ("action", "add"),
-                    ("action", "update"),
-                    ("action", "get"),
-                    ("action", "delete"),
-                ]),
-        )
-        .arg(
-            clap::Arg::with_name("secret_value")
-                .long("secret_value")
-                .value_name("SECRET_VALUE")
-                .takes_value(true)
-                .required_ifs(&[("action", "add"), ("action", "update")]),
-        )
-        .get_matches();
+    let opts: Opts = Opts::parse();
 
-    let repo_owner = matches.value_of("repo_owner").unwrap();
-    let repo_name = matches.value_of("repo_name").unwrap();
-    let auth_token = matches.value_of("auth_token").unwrap();
+    match opts.subcmd {
+        SubCommand::Secrets(secrets) => {
+            let Secrets {
+                repo_name,
+                repo_owner,
+                auth_token,
+                action,
+                secret_key,
+                secret_value,
+            } = secrets;
 
-    let action = matches.value_of("action");
-    let secret_key = matches.value_of("secret_key");
-    let secret_value = matches.value_of("secret_value");
+            let repo = ReposRequestParams::new(&repo_owner, &repo_name, &auth_token);
 
-    let repo = ReposRequestParams::new(repo_owner, repo_name, auth_token);
-
-    match (action, secret_key, secret_value) {
-        (Some("list"), _, _) => {
-            let secret_list = repo.get_secret_list().await?;
-            println!("All Secrets:\n\n{}", secret_list);
+            match (action.as_ref(), secret_key, secret_value) {
+                ("list", _, _) => {
+                    let secret_list = repo.get_secret_list().await?;
+                    println!("All Secrets:\n\n{}", secret_list);
+                }
+                ("get", Some(secret_key), _) => {
+                    let secret = repo.get_a_secret(&secret_key).await?;
+                    println!("Secret:\n\n{}", secret);
+                }
+                ("add", Some(secret_key), Some(secret_value))
+                | ("update", Some(secret_key), Some(secret_value)) => {
+                    repo.save_secret(&secret_key, &secret_value).await?;
+                }
+                ("delete", Some(secret_key), _) => {
+                    repo.delete_a_secret(&secret_key).await?;
+                }
+                _ => {}
+            }
         }
-        (Some("get"), Some(secret_key), _) => {
-            let secret = repo.get_a_secret(&secret_key).await?;
-            println!("Secret:\n\n{}", secret);
-        }
-        (Some("add"), Some(secret_key), Some(secret_value))
-        | (Some("update"), Some(secret_key), Some(secret_value)) => {
-            repo.save_secret(secret_key, secret_value).await?;
-        }
-        (Some("delete"), Some(secret_key), _) => {
-            repo.delete_a_secret(secret_key).await?;
-        }
-        _ => {}
     }
+
     Ok(())
 }
