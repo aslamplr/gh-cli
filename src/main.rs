@@ -33,6 +33,8 @@ struct Secrets {
         long = "auth_token",
         short = "t",
         value_name = "PERSONAL_ACCESS_TOKEN",
+        env = "GH_ACCESS_TOKEN",
+        hide_env_values = true,
         about = "Generate token - https://github.com/settings/tokens",
         display_order = 3,
         takes_value = true,
