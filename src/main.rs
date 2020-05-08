@@ -1,3 +1,4 @@
+use ansi_term::{Color, Style};
 use clap::Clap;
 use gh_cli::core::{repos::RepoRequest, secrets::Secrets as _};
 
@@ -94,21 +95,27 @@ async fn main() -> anyhow::Result<()> {
             match (action.as_ref(), secret_key, secret_value) {
                 ("list", _, _) => {
                     let secret_list = repo.get_secret_list().await?;
-                    println!("All Secrets:\n\n{}", secret_list);
+                    println!(
+                        "All Secrets:\n\n{}",
+                        Style::new().bold().paint(secret_list.to_string())
+                    );
                 }
                 ("get", Some(secret_key), _) => {
                     let secret = repo.get_a_secret(&secret_key).await?;
-                    println!("Secret:\n\n{}", secret);
+                    println!(
+                        "Secret:\n\n{}",
+                        Style::new().bold().paint(secret.to_string())
+                    );
                 }
                 (action, Some(secret_key), Some(secret_value))
                     if ["add", "update"].contains(&action) =>
                 {
                     repo.save_secret(&secret_key, &secret_value).await?;
-                    println!("Secret {} successful!", action);
+                    println!("{}", Color::Green.bold().paint(format!("Secret {} successful!", action)));
                 }
                 ("delete", Some(secret_key), _) => {
                     repo.delete_a_secret(&secret_key).await?;
-                    println!("Secret delete successful!");
+                    println!("{}", Color::Green.bold().paint("Secret delete successful!"));
                 }
                 _ => {}
             }
