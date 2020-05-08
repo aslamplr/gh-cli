@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use bytes::buf::{BufExt, Buf};
+use bytes::buf::{Buf, BufExt};
 pub use hyper::Method as HttpMethod;
 use hyper::{
     body::aggregate,
