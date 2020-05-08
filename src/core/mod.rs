@@ -1,2 +1,2 @@
-pub mod actions;
 pub mod repos;
+pub mod secrets;

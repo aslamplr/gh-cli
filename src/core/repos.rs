@@ -5,14 +5,14 @@ pub struct Repo<'a> {
 }
 
 #[derive(Debug)]
-pub struct ReposRequestParams<'a>(pub Repo<'a>, pub &'a str);
+pub struct RepoRequest<'a>(pub Repo<'a>, pub &'a str);
 
-impl<'a> ReposRequestParams<'a> {
+impl<'a> RepoRequest<'a> {
     pub fn new(repo_owner: &'a str, repo_name: &'a str, auth_token: &'a str) -> Self {
         let repo = Repo {
             repo_owner: &repo_owner,
             repo_name: &repo_name,
         };
-        ReposRequestParams(repo, &auth_token)
+        RepoRequest(repo, &auth_token)
     }
 }

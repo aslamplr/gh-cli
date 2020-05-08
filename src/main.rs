@@ -1,5 +1,5 @@
 use clap::Clap;
-use gh_cli::core::repos::ReposRequestParams;
+use gh_cli::core::{repos::RepoRequest, secrets::Secrets as _};
 
 #[derive(Clap)]
 #[clap(
@@ -89,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
                 secret_value,
             } = secrets;
 
-            let repo = ReposRequestParams::new(&repo_owner, &repo_name, &auth_token);
+            let repo = RepoRequest::new(&repo_owner, &repo_name, &auth_token);
 
             match (action.as_ref(), secret_key, secret_value) {
                 ("list", _, _) => {
@@ -100,12 +100,15 @@ async fn main() -> anyhow::Result<()> {
                     let secret = repo.get_a_secret(&secret_key).await?;
                     println!("Secret:\n\n{}", secret);
                 }
-                ("add", Some(secret_key), Some(secret_value))
-                | ("update", Some(secret_key), Some(secret_value)) => {
+                (action, Some(secret_key), Some(secret_value))
+                    if ["add", "update"].contains(&action) =>
+                {
                     repo.save_secret(&secret_key, &secret_value).await?;
+                    println!("Secret {} successful!", action);
                 }
                 ("delete", Some(secret_key), _) => {
                     repo.delete_a_secret(&secret_key).await?;
+                    println!("Secret delete successful!");
                 }
                 _ => {}
             }
