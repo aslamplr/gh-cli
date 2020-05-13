@@ -1,4 +1,4 @@
-use super::repos::{Repo, RepoRequest};
+use super::repos::RepoRequest;
 use crate::utils::{
     http::{delete, get, put, HttpBody},
     sealed_box::seal,
@@ -12,7 +12,7 @@ const BASE_URL: &str = "https://api.github.com/repos";
 #[async_trait]
 pub trait Secrets {
     async fn get_public_key(&self) -> Result<PublicKeyResponse>;
-    async fn get_secret_list(&self) -> Result<SecretListResponse>;
+    async fn get_all_secrets(&self) -> Result<SecretListResponse>;
     async fn get_a_secret(&self, secret_key: &str) -> Result<Secret>;
     async fn save_secret(&self, secret_key: &str, secret_value: &str) -> Result<()>;
     async fn delete_a_secret(&self, secret_key: &str) -> Result<()>;
@@ -24,8 +24,8 @@ impl Secrets for RepoRequest<'_> {
         get_public_key(&self).await
     }
 
-    async fn get_secret_list(&self) -> Result<SecretListResponse> {
-        get_secret_list(&self).await
+    async fn get_all_secrets(&self) -> Result<SecretListResponse> {
+        get_all_secrets(&self).await
     }
 
     async fn get_a_secret(&self, secret_key: &str) -> Result<Secret> {
@@ -115,11 +115,7 @@ where
     T: serde::de::DeserializeOwned,
 {
     let RepoRequest(repo, auth_token) = params;
-    let Repo {
-        repo_owner,
-        repo_name,
-    } = repo;
-    let url = format!("{}/{}/{}/{}", BASE_URL, repo_owner, repo_name, path);
+    let url = format!("{}/{}/{}", BASE_URL, repo, path);
     let resp = get(&url, &auth_token).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
@@ -129,7 +125,7 @@ async fn get_public_key(params: &RepoRequest<'_>) -> Result<PublicKeyResponse> {
     get_from_gh("actions/secrets/public-key", &params).await
 }
 
-async fn get_secret_list(params: &RepoRequest<'_>) -> Result<SecretListResponse> {
+async fn get_all_secrets(params: &RepoRequest<'_>) -> Result<SecretListResponse> {
     get_from_gh("actions/secrets", &params).await
 }
 
@@ -143,14 +139,7 @@ async fn put_gh_secret(
     secret_save_req: &SecretSaveRequest,
 ) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
-    let Repo {
-        repo_owner,
-        repo_name,
-    } = repo;
-    let url = format!(
-        "{}/{}/{}/actions/secrets/{}",
-        BASE_URL, repo_owner, repo_name, secret_key
-    );
+    let url = format!("{}/{}/actions/secrets/{}", BASE_URL, repo, secret_key);
     put(
         &url,
         HttpBody::try_from_serialize(&secret_save_req)?,
@@ -162,14 +151,7 @@ async fn put_gh_secret(
 
 async fn delete_a_secret(params: &RepoRequest<'_>, secret_key: &str) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
-    let Repo {
-        repo_owner,
-        repo_name,
-    } = repo;
-    let url = format!(
-        "{}/{}/{}/actions/secrets/{}",
-        BASE_URL, repo_owner, repo_name, secret_key
-    );
+    let url = format!("{}/{}/actions/secrets/{}", BASE_URL, repo, secret_key);
     delete(&url, &auth_token).await?;
     Ok(())
 }

@@ -37,31 +37,21 @@ struct Secrets {
         env = "GH_ACCESS_TOKEN",
         hide_env_values = true,
         about = "Generate token - https://github.com/settings/tokens",
-        display_order = 3,
+        display_order = 2,
         takes_value = true,
         required = true
     )]
     auth_token: String,
     #[clap(
-        long = "repo_owner",
-        short = "o",
-        value_name = "REPO_OWNER",
-        about = "Repository owner",
+        long = "repo_addr",
+        short = "r",
+        value_name = "OWNER/NAME",
+        about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
         takes_value = true,
         required = true
     )]
-    repo_owner: String,
-    #[clap(
-        long = "repo_name",
-        short = "n",
-        value_name = "REPO_NAME",
-        about = "Repository name",
-        display_order = 2,
-        takes_value = true,
-        required = true
-    )]
-    repo_name: String,
+    repo_addr: String,
     #[clap(long = "action", short = "a", value_name = "ACTION", possible_values = &["list", "get", "add", "update", "delete"], display_order = 4, takes_value = true, required = true)]
     action: String,
     #[clap(long = "secret_key", value_name = "SECRET_KEY", takes_value = true, required_ifs = &[
@@ -82,19 +72,18 @@ async fn main() -> anyhow::Result<()> {
     match opts.subcmd {
         SubCommand::Secrets(secrets) => {
             let Secrets {
-                repo_name,
-                repo_owner,
+                repo_addr,
                 auth_token,
                 action,
                 secret_key,
                 secret_value,
             } = secrets;
 
-            let repo = RepoRequest::new(&repo_owner, &repo_name, &auth_token);
+            let repo = RepoRequest::try_from(&repo_addr, &auth_token)?;
 
             match (action.as_ref(), secret_key, secret_value) {
                 ("list", _, _) => {
-                    let secret_list = repo.get_secret_list().await?;
+                    let secret_list = repo.get_all_secrets().await?;
                     println!(
                         "All Secrets:\n\n{}",
                         Style::new().bold().paint(secret_list.to_string())
@@ -111,7 +100,12 @@ async fn main() -> anyhow::Result<()> {
                     if ["add", "update"].contains(&action) =>
                 {
                     repo.save_secret(&secret_key, &secret_value).await?;
-                    println!("{}", Color::Green.bold().paint(format!("Secret {} successful!", action)));
+                    println!(
+                        "{}",
+                        Color::Green
+                            .bold()
+                            .paint(format!("Secret {} successful!", action))
+                    );
                 }
                 ("delete", Some(secret_key), _) => {
                     repo.delete_a_secret(&secret_key).await?;
