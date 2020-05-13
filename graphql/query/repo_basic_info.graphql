@@ -1,0 +1,20 @@
+query RepoBasicInfoQuery($name: String!, $owner: String!) {
+  repository(name: $name, owner: $owner) {
+    nameWithOwner
+    description
+    createdAt
+    pushedAt
+    homepageUrl
+    isPrivate
+    isArchived
+    primaryLanguage {
+      name
+    }
+    licenseInfo {
+      name
+    }
+    stargazers {
+      totalCount
+    }
+  }
+}
