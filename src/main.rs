@@ -43,15 +43,15 @@ struct Secrets {
     )]
     auth_token: String,
     #[clap(
-        long = "repo_addr",
-        short = "r",
+        long = "name",
+        short = "n",
         value_name = "OWNER/NAME",
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
         takes_value = true,
         required = true
     )]
-    repo_addr: String,
+    name: String,
     #[clap(long = "action", short = "a", value_name = "ACTION", possible_values = &["list", "get", "add", "update", "delete"], display_order = 4, takes_value = true, required = true)]
     action: String,
     #[clap(long = "secret_key", value_name = "SECRET_KEY", takes_value = true, required_ifs = &[
@@ -72,14 +72,14 @@ async fn main() -> anyhow::Result<()> {
     match opts.subcmd {
         SubCommand::Secrets(secrets) => {
             let Secrets {
-                repo_addr,
+                name,
                 auth_token,
                 action,
                 secret_key,
                 secret_value,
             } = secrets;
 
-            let repo = RepoRequest::try_from(&repo_addr, &auth_token)?;
+            let repo = RepoRequest::try_from(&name, &auth_token)?;
 
             match (action.as_ref(), secret_key, secret_value) {
                 ("list", _, _) => {
