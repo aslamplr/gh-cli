@@ -1,6 +1,10 @@
 use ansi_term::{Color, Style};
 use clap::Clap;
-use gh_cli::core::{repos::RepoRequest, secrets::Secrets as _};
+use gh_cli::core::{
+    basic_info::{basic_info_response, BasicInfo as _},
+    repos::RepoRequest,
+    secrets::Secrets as _,
+};
 
 #[derive(Clap)]
 #[clap(
@@ -19,7 +23,40 @@ struct Opts {
 
 #[derive(Clap)]
 enum SubCommand {
+    Repo(Repo),
     Secrets(Secrets),
+}
+
+#[derive(Clap)]
+#[clap(
+    name = "GitHub Repo CLI",
+    version = "v0.3.0",
+    author = "Aslam Ahammed A. <aslamplr@gmail.com>",
+    about = "GitHub Repo CLI"
+)]
+struct Repo {
+    #[clap(
+        long = "name",
+        short = "n",
+        value_name = "OWNER/NAME",
+        about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
+        display_order = 1,
+        takes_value = true,
+        required = true
+    )]
+    name: String,
+    #[clap(
+        long = "auth_token",
+        short = "t",
+        value_name = "PERSONAL_ACCESS_TOKEN",
+        env = "GH_ACCESS_TOKEN",
+        hide_env_values = true,
+        about = "Generate token - https://github.com/settings/tokens",
+        display_order = 2,
+        takes_value = true,
+        required = true
+    )]
+    auth_token: String,
 }
 
 #[derive(Clap)]
@@ -70,6 +107,59 @@ async fn main() -> anyhow::Result<()> {
     let opts: Opts = Opts::parse();
 
     match opts.subcmd {
+        SubCommand::Repo(repo) => {
+            let Repo { name, auth_token } = repo;
+            let repo = RepoRequest::try_from(&name, &auth_token)?;
+            let basic_info = repo.get_basic_info().await?;
+            if let Some(repo) = &basic_info.repository {
+                let basic_info_response::RepoBasicInfoQueryRepository {
+                    name_with_owner,
+                    description,
+                    created_at,
+                    pushed_at,
+                    homepage_url,
+                    is_private,
+                    is_archived,
+                    primary_language,
+                    license_info,
+                    stargazers,
+                } = repo;
+                let access_type = if *is_private { "Private" } else { "Public" };
+                let license = if let Some(license_info) = &license_info {
+                    &license_info.name
+                } else {
+                    "Unlicensed"
+                };
+                let stargazers = stargazers.total_count;
+                let primary_language = if let Some(primary_language) = primary_language {
+                    format!(" [{}]", &primary_language.name)
+                } else {
+                    "".to_owned()
+                };
+                println!("Repo Basic Information:\n");
+                println!(
+                    "{}",
+                    Style::new().bold().paint(format!(
+                        "{} [🚦 {}] [⚖️  {}] [⭐️ {}]{}",
+                        name_with_owner, access_type, license, stargazers, primary_language
+                    ))
+                );
+                if let Some(homepage_url) = homepage_url {
+                    println!("{}", &homepage_url);
+                }
+                if *is_archived {
+                    println!("This repo is archived");
+                }
+                if let Some(description) = description {
+                    println!("{}", &description);
+                }
+                println!();
+                println!("Created on \t{}", created_at);
+                if let Some(pushed_at) = pushed_at {
+                    println!("Last commit on \t{}", pushed_at);
+                }
+            }
+        }
         SubCommand::Secrets(secrets) => {
             let Secrets {
                 name,

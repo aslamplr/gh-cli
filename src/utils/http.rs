@@ -37,9 +37,13 @@ impl HttpBody {
     where
         T: serde::Serialize,
     {
-        Ok(HttpBody {
-            inner: Body::from(serde_json::to_string(&body)?),
-        })
+        Ok(HttpBody::from(serde_json::to_string(&body)?))
+    }
+}
+
+impl<T: Into<Body>> From<T> for HttpBody {
+    fn from(body: T) -> Self {
+        HttpBody { inner: body.into() }
     }
 }
 
@@ -135,7 +139,7 @@ pub async fn get(url: &str, auth_token: &str) -> Result<HttpResponse> {
     request(&url, HttpMethod::GET, &auth_token).call().await
 }
 
-pub async fn _post(url: &str, body: HttpBody, auth_token: &str) -> Result<HttpResponse> {
+pub async fn post(url: &str, body: HttpBody, auth_token: &str) -> Result<HttpResponse> {
     request(&url, HttpMethod::POST, &auth_token)
         .body(body)?
         .call()
