@@ -1,7 +1,11 @@
-/// Auto generated code using `graphql-client` CLI!
-pub struct RepoBasicInfoQuery;
-type URI = String;
+// This is auto-generated using `build.rs` file! Do not modify!
+
+#![allow(clippy::redundant_static_lifetimes)]
+#![allow(unknown_lints)]
+
 type DateTime = String;
+type URI = String;
+pub struct RepoBasicInfoQuery;
 pub mod repo_basic_info_query {
     #![allow(dead_code)]
     pub const OPERATION_NAME: &'static str = "RepoBasicInfoQuery";
