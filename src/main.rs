@@ -9,7 +9,7 @@ use gh_cli::core::{
 #[derive(Clap)]
 #[clap(
     name = "GitHub CLI",
-    version = "v0.3.0",
+    version = "v0.3.1",
     author = "Aslam Ahammed A. <aslamplr@gmail.com>",
     about = r#"Yet another unofficial GitHub CLI!
 Minimalistic, opinionated, and unofficial by default.
@@ -30,7 +30,7 @@ enum SubCommand {
 #[derive(Clap)]
 #[clap(
     name = "GitHub Repo CLI",
-    version = "v0.3.0",
+    version = "v0.3.1",
     author = "Aslam Ahammed A. <aslamplr@gmail.com>",
     about = "GitHub Repo CLI"
 )]
@@ -62,7 +62,7 @@ struct Repo {
 #[derive(Clap)]
 #[clap(
     name = "GitHub Actions Secrets CLI",
-    version = "v0.3.0",
+    version = "v0.3.1",
     author = "Aslam Ahammed A. <aslamplr@gmail.com>",
     about = "GitHub Actions Secrets CLI wrapper for GitHub Actions Secrets API"
 )]

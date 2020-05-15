@@ -1,27 +1,48 @@
 # gh-cli 
 named `gh-actions-secrets` earlier, renamed to `gh-cli`.
 
+## Install
+
+### Option 1
+Download pre-compiled binaries for MacOS, Ubuntu and Windows from the release page.  
+
 [🗃 » Download the latest release «](https://github.com/aslamplr/gh-cli/releases)
 
-![cmd](docs/5ED19EF9-972D-432A-82FE-F7686A6232DF.png)
+### Option 2
+If you have installed `cargo` you may proceed to install this CLI using cargo. Note that while installing with cargo, cargo will try to build this crate from source. 
+
+```
+cargo install --git https://github.com/aslamplr/gh-cli.git --tag v0.3.1
+```
+
+You may install `cargo` along with `rust`, follow the [rust install instructions from here](https://www.rust-lang.org/tools/install)
+
+
+![cmd](docs/gh-cli.png)
 
 ## Sub Commands
 
+### Repo
+![repo-cmd](docs/gh-cli-repo.png)
+
+#### Example
+![repo-cmd-sample](docs/gh-cli-repo_sample.png)
+
 ### Secrets
-![secrets-cmd](docs/8F520E9E-9721-49C5-B560-D281D95B1375.png)
+![secrets-cmd](docs/gh-cli-secrets.png)
 
 #### Example
 
 **Add new secret to Github actions secrets**
 
 ```
-gh-cli secrets --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --repo_owner aslamplr --repo_name gh-actions-secrets --action add --secret_key SECRET_KEY --secret_value SECRET_VALUE_XYZ_BLAH_BLAH
+gh-cli secrets --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --name aslamplr/gh-cli --action add --secret_key SECRET_KEY --secret_value SECRET_VALUE_XYZ_BLAH_BLAH
 ```
 
 **List all secrets**
 
 ```
-gh-cli secrets --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --repo_owner aslamplr --repo_name gh-actions-secrets --action list
+gh-cli secrets --auth_token=qwertyuipasdfghjklzxcvbnmlkgsdfg --name aslamplr/gh-cli --action list
 ```
 
 ## Development
