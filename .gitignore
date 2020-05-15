@@ -1,4 +1,3 @@
 /target
 SECRET.txt
-graphql/schema/
-
+schema.public.graphql
