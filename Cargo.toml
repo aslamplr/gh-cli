@@ -23,6 +23,7 @@ ansi_term = "0.12.1"
 graphql_client = "0.9.0"
 
 [build-dependencies]
+anyhow = "1.0"
 curl = "0.4.29"
 graphql_client_codegen = "0.9.0"
 syn = "1.0"
