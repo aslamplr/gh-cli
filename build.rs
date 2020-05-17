@@ -53,7 +53,7 @@ fn generate_code(query_path: &str) -> anyhow::Result<()> {
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
     let dest_dir_path: PathBuf = Path::new(&out_dir).join("graphql");
     if !dest_dir_path.exists() {
-        std::fs::create_dir_all(&dest_dir_path).unwrap();
+        std::fs::create_dir_all(&dest_dir_path)?;
     }
     let dest_file_path = dest_dir_path.join(query_file_name).with_extension("rs");
 
