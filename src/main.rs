@@ -6,6 +6,12 @@ use gh_cli::core::{
     secrets::Secrets as _,
 };
 
+lazy_static::lazy_static! {
+    static ref GIT_REPO_ADDR_FROM_REPO: anyhow::Result<String> = get_git_addr_from_repo();
+    static ref REPO_ADDR: &'static str = GIT_REPO_ADDR_FROM_REPO.as_ref().map_or_else(|_| "", |addr| addr);
+    static ref IS_ADDR_REQUIRED: bool = GIT_REPO_ADDR_FROM_REPO.is_err();
+}
+
 #[derive(Clap)]
 #[clap(
     name = "GitHub CLI",
@@ -42,7 +48,9 @@ struct Repo {
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
         takes_value = true,
-        required = true
+        required = *IS_ADDR_REQUIRED,
+        default_value = &REPO_ADDR,
+        hide_default_value = true,
     )]
     name: String,
     #[clap(
@@ -86,7 +94,9 @@ struct Secrets {
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
         takes_value = true,
-        required = true
+        required = *IS_ADDR_REQUIRED,
+        default_value = &REPO_ADDR,
+        hide_default_value = true,
     )]
     name: String,
     #[clap(long = "action", short = "a", value_name = "ACTION", possible_values = &["list", "get", "add", "update", "delete"], display_order = 4, takes_value = true, required = true)]
@@ -207,4 +217,26 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn get_git_addr_from_repo() -> anyhow::Result<String> {
+    let output = std::process::Command::new("git")
+        .args(&["config", "--get", "remote.origin.url"])
+        .output()?
+        .stdout;
+    lazy_static::lazy_static! {
+        static ref RE: regex::Regex = regex::Regex::new(r"github\.com[:/](\S+)/(\S+)\.git").unwrap();
+    }
+    let regex_cap_err = || anyhow::anyhow!("Unable to capture github git repo!");
+    RE.captures(std::str::from_utf8(&output)?)
+        .map_or(None, |caps| {
+            match (
+                caps.get(1).map(|c| c.as_str()),
+                caps.get(2).map(|c| c.as_str()),
+            ) {
+                (Some(owner), Some(name)) => Some(format!("{}/{}", owner, name)),
+                _ => None,
+            }
+        })
+        .ok_or_else(regex_cap_err)
 }
