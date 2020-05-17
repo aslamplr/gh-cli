@@ -9,6 +9,7 @@ repository = "https://github.com/aslamplr/gh-cli"
 
 [dependencies]
 clap = "3.0.0-beta.1"
+regex = "1"
 anyhow = "1.0"
 hyper = "0.13"
 hyper-tls = "0.4.1"
@@ -21,6 +22,7 @@ base64 = "0.12.0"
 async-trait = "0.1.30"
 ansi_term = "0.12.1"
 graphql_client = "0.9.0"
+lazy_static = "1.4.0"
 
 [build-dependencies]
 anyhow = "1.0"
