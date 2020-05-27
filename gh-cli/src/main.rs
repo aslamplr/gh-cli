@@ -1,6 +1,6 @@
 use ansi_term::{Color, Style};
 use clap::Clap;
-use gh_cli::core::{
+use gh_lib::core::{
     basic_info::{basic_info_response, BasicInfo as _},
     repos::RepoRequest,
     secrets::Secrets as _,

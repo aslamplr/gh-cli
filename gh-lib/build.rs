@@ -31,6 +31,7 @@ fn generate_code(query_path: &str) -> anyhow::Result<()> {
         }
         .into(),
     );
+    options.set_response_derives(String::from("Serialize"));
     let schema_path = PathBuf::from(SCHEMA_DOWNLOAD_PATH);
     let gen = generate_module_token_stream(query_path.clone(), &schema_path, options)
         .expect("[build.rs] Module token stream generation failed!");

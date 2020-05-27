@@ -1,0 +1,17 @@
+[package]
+name = "gh-cli"
+version = "0.3.1"
+authors = ["Aslam Ahammed <aslamplr@gmail.com>"]
+edition = "2018"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/aslamplr/gh-cli"
+
+[dependencies]
+clap = "3.0.0-beta.1"
+regex = "1"
+anyhow = "1.0"
+tokio = { version = "0.2", features = ["full"] }
+ansi_term = "0.12.1"
+lazy_static = "1.4.0"
+gh-lib = { path = "../gh-lib" }
