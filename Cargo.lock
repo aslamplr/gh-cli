@@ -366,23 +366,31 @@ version = "0.3.1"
 dependencies = [
  "ansi_term",
  "anyhow",
+ "clap",
+ "gh-lib",
+ "lazy_static",
+ "regex",
+ "tokio",
+]
+
+[[package]]
+name = "gh-lib"
+version = "0.3.1"
+dependencies = [
+ "anyhow",
  "async-trait",
  "base64",
  "bytes",
- "clap",
  "curl",
  "graphql_client",
  "graphql_client_codegen",
  "hyper",
  "hyper-tls",
- "lazy_static",
  "quote",
- "regex",
  "serde",
  "serde_json",
  "sodiumoxide",
  "syn",
- "tokio",
 ]
 
 [[package]]
