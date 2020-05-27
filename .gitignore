@@ -1,3 +1,7 @@
 /target
 SECRET.txt
 schema.public.graphql
+
+# IDE 
+.vscode
+

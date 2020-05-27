@@ -1,5 +1,10 @@
 [workspace]
 members = [
   "gh-lib",
+  "gh-cli",
+  "gh-web"
+]
+default-members = [
+  "gh-lib",
   "gh-cli"
 ]
