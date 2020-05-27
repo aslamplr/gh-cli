@@ -229,7 +229,7 @@ fn get_git_addr_from_repo() -> anyhow::Result<String> {
     }
     let regex_cap_err = || anyhow::anyhow!("Unable to capture github git repo!");
     RE.captures(std::str::from_utf8(&output)?)
-        .map_or(None, |caps| {
+        .and_then(|caps| {
             match (
                 caps.get(1).map(|c| c.as_str()),
                 caps.get(2).map(|c| c.as_str()),

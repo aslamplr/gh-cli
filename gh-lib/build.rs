@@ -7,12 +7,12 @@ use std::io::{BufWriter, Write as _};
 use std::path::{Path, PathBuf};
 use syn::Token;
 
-const GH_PUBLIC_SCHEMA_URL: &'static str =
+const GH_PUBLIC_SCHEMA_URL: &str =
     "https://developer.github.com/v4/public_schema/schema.public.graphql";
-const SCHEMA_DOWNLOAD_PATH: &'static str = "graphql/schema.public.graphql";
+const SCHEMA_DOWNLOAD_PATH: &str = "graphql/schema.public.graphql";
 
 // Queries
-const REPO_BASIC_INFO: &'static str = "graphql/query/repo_basic_info.graphql";
+const REPO_BASIC_INFO: &str = "graphql/query/repo_basic_info.graphql";
 
 fn main() -> anyhow::Result<()> {
     println!("cargo:rerun-if-changed={}", REPO_BASIC_INFO);
