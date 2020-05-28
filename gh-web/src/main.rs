@@ -16,7 +16,11 @@ async fn main() {
         .with(warp::log("gh-web"))
         .recover(problem::unpack_problem);
 
-    warp::serve(routes).run(([0, 0, 0, 0], 3030)).await;
+    let port = env::var_os("PORT")
+        .map(|p| p.to_str().unwrap().trim().parse::<u16>().unwrap())
+        .unwrap_or(3030u16);
+
+    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 }
 
 mod filters {
@@ -24,7 +28,9 @@ mod filters {
     use warp::{self, Filter, Rejection, Reply};
 
     pub fn repo() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-        get_repo_basic_info().or(get_repo_secrets()).or(save_repo_secrets())
+        get_repo_basic_info()
+            .or(get_repo_secrets())
+            .or(save_repo_secrets())
     }
 
     // GET /repo/:repo_owner/:repo_name
@@ -46,7 +52,7 @@ mod filters {
     #[derive(serde::Serialize, serde::Deserialize)]
     struct SecretInput {
         key: String,
-        value: String
+        value: String,
     }
 
     // POST /repo/:repo_owner/:repo_name/secrets
@@ -62,7 +68,7 @@ mod filters {
             .and_then(handlers::save_repo_secrets)
     }
 
-    pub fn access_token_header() -> impl Filter<Extract = (String, ), Error = Rejection> + Clone {
+    pub fn access_token_header() -> impl Filter<Extract = (String,), Error = Rejection> + Clone {
         warp::header::<String>("Access-Token")
     }
 }
@@ -101,11 +107,16 @@ mod handlers {
         secret_key: String,
         secret_value: String,
     ) -> Result<impl Reply, Rejection> {
-        super::services::save_repo_secrets(&format!("{}/{}", repo_owner, repo_name), &auth_token, &secret_key, &secret_value)
-            .await
-            .map(|_| warp::reply())
-            .map_err(super::problem::from_anyhow)
-            .map_err(warp::reject::custom)
+        super::services::save_repo_secrets(
+            &format!("{}/{}", repo_owner, repo_name),
+            &auth_token,
+            &secret_key,
+            &secret_value,
+        )
+        .await
+        .map(|_| warp::reply())
+        .map_err(super::problem::from_anyhow)
+        .map_err(warp::reject::custom)
     }
 }
 
@@ -133,7 +144,12 @@ mod services {
         repo_request.get_all_secrets().await
     }
 
-    pub async fn save_repo_secrets(repo_addr: &str, auth_token: &str, secret_key: &str, secret_value: &str) -> Result<()> {
+    pub async fn save_repo_secrets(
+        repo_addr: &str,
+        auth_token: &str,
+        secret_key: &str,
+        secret_value: &str,
+    ) -> Result<()> {
         let repo_request = RepoRequest::try_from(&repo_addr, &auth_token)?;
         repo_request.save_secret(secret_key, secret_value).await
     }

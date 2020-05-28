@@ -29,5 +29,4 @@ COPY --from=build-deps /usr/src/gh-cli/target/release/gh-web /usr/local/bin/gh-w
 
 ENV RUST_LOG=info
 CMD ["gh-web"]
-EXPOSE 3030
 
