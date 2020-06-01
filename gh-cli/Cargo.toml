@@ -15,3 +15,4 @@ tokio = { version = "0.2", features = ["full"] }
 ansi_term = "0.12.1"
 lazy_static = "1.4.0"
 gh-lib = { path = "../gh-lib" }
+gh-auth = { path = "../gh-auth" }

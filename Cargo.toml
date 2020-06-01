@@ -1,10 +1,12 @@
 [workspace]
 members = [
   "gh-lib",
+  "gh-auth",
   "gh-cli",
   "gh-web"
 ]
 default-members = [
   "gh-lib",
+  "gh-auth",
   "gh-cli"
 ]
