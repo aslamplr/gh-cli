@@ -29,6 +29,8 @@ struct Opts {
 
 #[derive(Clap)]
 enum SubCommand {
+    #[clap(about = "Login using GitHub OAuth (requires web browser)")]
+    Login,
     Repo(Repo),
     Secrets(Secrets),
 }
@@ -117,6 +119,18 @@ async fn main() -> anyhow::Result<()> {
     let opts: Opts = Opts::parse();
 
     match opts.subcmd {
+        SubCommand::Login => {
+            let access_token = gh_auth::start_auth_flow().await?;
+            eprintln!("# Run the following to use the access token in subesquent requests!\n");
+            println!("export GH_ACCESS_TOKEN={}", access_token);
+            eprintln!("");
+            let oauth_host = gh_auth::OAUTH_HOST;
+            let client_id = gh_auth::OAUTH_CLIENT_ID;
+            eprintln!(
+                "# Review or revoke access visit - https://{}/settings/connections/applications/{}",
+                oauth_host, client_id
+            );
+        }
         SubCommand::Repo(repo) => {
             let Repo { name, auth_token } = repo;
             let repo = RepoRequest::try_from(&name, &auth_token)?;

@@ -525,12 +525,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "gh-auth"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures",
+ "hyper",
+ "hyper-tls",
+ "quote",
+ "rand 0.7.3",
+ "url",
+ "webbrowser",
+]
+
+[[package]]
 name = "gh-cli"
 version = "0.3.1"
 dependencies = [
  "ansi_term",
  "anyhow",
  "clap",
+ "gh-auth",
  "gh-lib",
  "lazy_static",
  "regex",
@@ -2039,6 +2054,22 @@ name = "wasi"
 version = "0.9.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
+
+[[package]]
+name = "webbrowser"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97d468a911faaaeb783693b004e1c62e0063e646b0afae5c146cd144e566e66d"
+dependencies = [
+ "widestring",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "widestring"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "effc0e4ff8085673ea7b9b2e3c73f6bd4d118810c9009ed8f1e16bd96c331db6"
 
 [[package]]
 name = "winapi"
