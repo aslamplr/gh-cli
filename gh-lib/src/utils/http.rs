@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use bytes::buf::{Buf, BufExt};
 pub use hyper::Method as HttpMethod;
 use hyper::{
-    body::aggregate,
+    body::{aggregate, to_bytes},
     http::{request::Builder, response::Response},
     Body, Client, Request, Uri,
 };
@@ -58,20 +58,17 @@ impl HttpResponse {
         }
     }
 
-    async fn aggregate(self) -> Result<impl Buf> {
-        Ok(aggregate(self.inner).await?)
-    }
-
     pub async fn deserialize<T>(self) -> Result<T>
     where
         T: serde::de::DeserializeOwned,
     {
         let status = self.status();
-        let body = self.aggregate().await?;
         if status.is_success() {
+            let body = aggregate(self.inner).await?;
             let body = serde_json::from_reader(body.reader())?;
             Ok(body)
         } else {
+            let body = to_bytes(self.inner).await?;
             let body = std::str::from_utf8(body.bytes())?;
             Err(anyhow!("[{}] {}", status, body))
         }
@@ -81,8 +78,8 @@ impl HttpResponse {
         self.inner.status()
     }
 
-    pub async fn _body(self) -> Result<String> {
-        let body = self.aggregate().await?;
+    pub async fn body(self) -> Result<String> {
+        let body = to_bytes(self.inner).await?;
         Ok(std::str::from_utf8(body.bytes())?.into())
     }
 }
@@ -113,7 +110,7 @@ impl HttpRequestBuilder {
         Self { client, builder }
     }
 
-    pub fn _header(self, key: &str, value: &str) -> Self {
+    pub fn header(self, key: &str, value: &str) -> Self {
         let builder = self.builder.header(key, value);
         Self { builder, ..self }
     }
