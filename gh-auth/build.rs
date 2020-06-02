@@ -4,10 +4,20 @@ use std::path::{Path, PathBuf};
 
 fn main() -> anyhow::Result<()> {
     let success_html = fs::read_to_string("success.html")?;
-    let client_id =
-        std::env::var("GH_OAUTH_CLIENT_ID").expect("Required to set env $GH_OAUTH_CLIENT_ID.");
-    let client_secret = std::env::var("GH_OAUTH_CLIENT_SECRET")
-        .expect("Required to set env $GH_OAUTH_CLIENT_SECRET.");
+    let (client_id, client_secret) = {
+        let client_id = std::env::var("GH_OAUTH_CLIENT_ID");
+        let client_secret = std::env::var("GH_OAUTH_CLIENT_SECRET");
+        match std::env::var("PROFILE").unwrap().as_ref() {
+            "release" => (
+                client_id.expect("Required to set env $GH_OAUTH_CLIENT_ID"),
+                client_secret.expect("Required to set env $GH_OAUTH_CLIENT_SECRET"),
+            ),
+            _ => (
+                client_id.unwrap_or_default(),
+                client_secret.unwrap_or_default(),
+            ),
+        }
+    };
 
     let generated_code = quote::quote! {
       pub const OAUTH_HOST: &str = "github.com";
