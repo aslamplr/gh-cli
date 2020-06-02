@@ -67,6 +67,8 @@ struct Repo {
         required = true
     )]
     auth_token: String,
+    #[clap(long, short, about = "Print README")]
+    readme: bool,
 }
 
 #[derive(Clap)]
@@ -132,9 +134,22 @@ async fn main() -> anyhow::Result<()> {
             );
         }
         SubCommand::Repo(repo) => {
-            let Repo { name, auth_token } = repo;
+            let Repo {
+                name,
+                auth_token,
+                readme,
+            } = repo;
             let repo = RepoRequest::try_from(&name, &auth_token)?;
-            let basic_info = repo.get_basic_info().await?;
+            let (basic_info, readme) = {
+                if readme {
+                    tokio::join!(repo.get_basic_info(), async {
+                        repo.get_raw_readme().await.ok()
+                    })
+                } else {
+                    (repo.get_basic_info().await, None)
+                }
+            };
+            let basic_info = basic_info?;
             if let Some(repo) = &basic_info.repository {
                 let basic_info_response::RepoBasicInfoQueryRepository {
                     name_with_owner,
@@ -181,6 +196,9 @@ async fn main() -> anyhow::Result<()> {
                 println!("Created on \t{}", created_at);
                 if let Some(pushed_at) = pushed_at {
                     println!("Last commit on \t{}", pushed_at);
+                }
+                if let Some(readme) = readme {
+                    println!("README: \n\n{}", readme);
                 }
             }
         }
