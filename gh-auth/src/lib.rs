@@ -68,30 +68,30 @@ impl OAuthFlow<'_> {
         }
 
         let access_token = {
-            use futures::channel::oneshot;
+            use futures::{channel::oneshot, lock::Mutex};
             use hyper::{
                 body::to_bytes,
                 service::{make_service_fn, service_fn},
                 Body, Client, Method, Request, Response, Server, StatusCode, Uri,
             };
-            use std::sync::{Arc, Mutex};
-
-            let success_html = self.success_html.to_owned();
+            use std::sync::Arc;
 
             let (shutdown_server_send, shutdown_server_recv) = oneshot::channel::<()>();
             let (auth_code_send, auth_code_recv) = oneshot::channel::<(String, String)>();
             let auth_code_send = Arc::new(Mutex::new(Some(auth_code_send)));
-            let original_state = Arc::new(Mutex::new(state));
+
+            let original_state = &state;
+            let success_html = self.success_html;
 
             let service = make_service_fn(move |_| {
-                let original_state = original_state.clone();
                 let auth_code_send = auth_code_send.clone();
+                let original_state = original_state.to_owned();
                 let success_html = success_html.to_owned();
 
                 async move {
                     Ok::<_, hyper::Error>(service_fn(move |req: Request<Body>| {
-                        let original_state = original_state.clone();
                         let auth_code_send = auth_code_send.clone();
+                        let original_state = original_state.to_owned();
                         let success_html = success_html.to_owned();
 
                         async move {
@@ -101,10 +101,9 @@ impl OAuthFlow<'_> {
                                     let query = req.uri().query().unwrap_or("");
                                     let parsed = parse(query.as_bytes());
                                     let state_recvd = utils::get_item_from_parse(parsed, "state");
-                                    let original_state = original_state.lock().unwrap().to_string();
                                     if state_recvd == original_state {
                                         if let Some(auth_code_send) =
-                                            auth_code_send.lock().unwrap().take()
+                                            auth_code_send.lock().await.take()
                                         {
                                             let code = utils::get_item_from_parse(parsed, "code");
                                             let _ = auth_code_send.send((code, state_recvd));
