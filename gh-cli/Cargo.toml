@@ -12,7 +12,8 @@ clap = "3.0.0-beta.1"
 regex = "1"
 anyhow = "1.0"
 tokio = { version = "0.2", features = ["full"] }
-ansi_term = "0.12.1"
+crossterm = "0.17"
+termimad = "0.8"
 lazy_static = "1.4.0"
 gh-lib = { path = "../gh-lib" }
 gh-auth = { path = "../gh-auth" }

@@ -1,5 +1,5 @@
-use ansi_term::{Color, Style};
 use clap::Clap;
+use crossterm::style::{Colorize, Styler};
 use gh_lib::core::{
     basic_info::{basic_info_response, BasicInfo as _},
     repos::RepoRequest,
@@ -178,10 +178,11 @@ async fn main() -> anyhow::Result<()> {
                 println!("Repo Basic Information:\n");
                 println!(
                     "{}",
-                    Style::new().bold().paint(format!(
+                    format!(
                         "{} [🚦 {}] [⚖️  {}] [⭐️ {}]{}",
                         name_with_owner, access_type, license, stargazers, primary_language
-                    ))
+                    )
+                    .bold()
                 );
                 if let Some(homepage_url) = homepage_url {
                     println!("{}", &homepage_url);
@@ -198,7 +199,11 @@ async fn main() -> anyhow::Result<()> {
                     println!("Last commit on \t{}", pushed_at);
                 }
                 if let Some(readme) = readme {
-                    println!("README: \n\n{}", readme);
+                    println!();
+                    println!("README:");
+                    printmd("---");
+                    printmd(&readme);
+                    printmd("---");
                 }
             }
         }
@@ -216,17 +221,11 @@ async fn main() -> anyhow::Result<()> {
             match (action.as_ref(), secret_key, secret_value) {
                 ("list", _, _) => {
                     let secret_list = repo.get_all_secrets().await?;
-                    println!(
-                        "All Secrets:\n\n{}",
-                        Style::new().bold().paint(secret_list.to_string())
-                    );
+                    println!("All Secrets:\n\n{}", secret_list.to_string().bold());
                 }
                 ("get", Some(secret_key), _) => {
                     let secret = repo.get_a_secret(&secret_key).await?;
-                    println!(
-                        "Secret:\n\n{}",
-                        Style::new().bold().paint(secret.to_string())
-                    );
+                    println!("Secret:\n\n{}", secret.to_string().bold());
                 }
                 (action, Some(secret_key), Some(secret_value))
                     if ["add", "update"].contains(&action) =>
@@ -234,14 +233,12 @@ async fn main() -> anyhow::Result<()> {
                     repo.save_secret(&secret_key, &secret_value).await?;
                     println!(
                         "{}",
-                        Color::Green
-                            .bold()
-                            .paint(format!("Secret {} successful!", action))
+                        format!("Secret {} successful!", action).bold().green()
                     );
                 }
                 ("delete", Some(secret_key), _) => {
                     repo.delete_a_secret(&secret_key).await?;
-                    println!("{}", Color::Green.bold().paint("Secret delete successful!"));
+                    println!("{}", "Secret delete successful!".bold().green());
                 }
                 _ => {}
             }
@@ -271,4 +268,24 @@ fn get_git_addr_from_repo() -> anyhow::Result<String> {
             }
         })
         .ok_or_else(regex_cap_err)
+}
+
+fn printmd(md: &str) {
+    use crossterm::style::{Attribute, Color};
+    use termimad::{rgb, MadSkin, StyledChar};
+    lazy_static::lazy_static! {
+        static ref TERM_SKIN: MadSkin = {
+            let mut skin = MadSkin::default();
+            skin.set_headers_fg(Color::DarkCyan);
+            skin.headers.iter_mut().for_each(|h| h.add_attr(Attribute::Bold));
+            skin.headers[0].set_fg(Color::Yellow);
+            skin.headers[0].set_bg(Color::DarkCyan);
+            skin.bold.set_fg(Color::DarkYellow);
+            skin.italic.set_fgbg(Color::Magenta, rgb(30, 30, 40));
+            skin.bullet = StyledChar::from_fg_char(Color::Yellow, '⟡');
+            skin.quote_mark.set_fg(Color::Yellow);
+            skin
+        };
+    }
+    TERM_SKIN.print_text(md);
 }
