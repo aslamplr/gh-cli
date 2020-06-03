@@ -43,12 +43,13 @@ impl OAuthFlow<'_> {
 
     pub async fn obtain_access_token(&self) -> Result<String> {
         let state = utils::generate_random_string(20);
-        let port = 19878;
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let addr = listener.local_addr()?;
         let query = url::form_urlencoded::Serializer::new(String::new())
             .append_pair("client_id", self.client_id)
             .append_pair(
                 "redirect_uri",
-                &format!("http://127.0.0.1:{}/callback", port),
+                &format!("http://{}/callback", addr),
             )
             .append_pair("scope", &self.scopes.join(" "))
             .append_pair("state", &state)
@@ -128,8 +129,7 @@ impl OAuthFlow<'_> {
                 }
             });
 
-            let addr = ([127, 0, 0, 1], port).into();
-            let server = Server::bind(&addr).serve(service);
+            let server = Server::from_tcp(listener)?.serve(service);
             let graceful = server.with_graceful_shutdown(async {
                 shutdown_server_recv.await.ok();
             });
