@@ -122,16 +122,28 @@ async fn main() -> anyhow::Result<()> {
 
     match opts.subcmd {
         SubCommand::Login => {
-            let access_token = gh_auth::start_auth_flow().await?;
-            eprintln!("# Run the following to use the access token in subesquent requests!\n");
-            println!("export GH_ACCESS_TOKEN={}", access_token);
-            eprintln!("");
-            let oauth_host = gh_auth::OAUTH_HOST;
-            let client_id = gh_auth::OAUTH_CLIENT_ID;
-            eprintln!(
-                "# Review or revoke access visit - https://{}/settings/connections/applications/{}",
-                oauth_host, client_id
-            );
+            let user_input = {
+                use std::io::{Read, Write};
+                print!("Press Enter to open github.com in your browser for auth...");
+                std::io::stdout().flush()?;
+                let mut buf = [0u8; 1];
+                std::io::stdin().read_exact(&mut buf)?;
+                buf[0] as char
+            };
+            if user_input == '\n' {
+                let access_token = gh_auth::start_auth_flow().await?;
+                eprintln!("# Run the following to use the access token in subesquent requests!\n");
+                println!("export GH_ACCESS_TOKEN={}", access_token);
+                eprintln!("");
+                let oauth_host = gh_auth::OAUTH_HOST;
+                let client_id = gh_auth::OAUTH_CLIENT_ID;
+                eprintln!(
+                    "# Review or revoke access visit - https://{}/settings/connections/applications/{}",
+                    oauth_host, client_id
+                );
+            } else {
+                return Err(anyhow::anyhow!("Unexpected input!"));
+            }
         }
         SubCommand::Repo(repo) => {
             let Repo {
