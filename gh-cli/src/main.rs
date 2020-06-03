@@ -3,7 +3,7 @@ use crossterm::style::{Colorize, Styler};
 use gh_lib::core::{
     basic_info::{basic_info_response, BasicInfo as _},
     repos::RepoRequest,
-    secrets::Secrets as _,
+    secrets::{Secret, SecretListResponse, Secrets as _},
 };
 
 lazy_static::lazy_static! {
@@ -232,12 +232,36 @@ async fn main() -> anyhow::Result<()> {
 
             match (action.as_ref(), secret_key, secret_value) {
                 ("list", _, _) => {
-                    let secret_list = repo.get_all_secrets().await?;
-                    println!("All Secrets:\n\n{}", secret_list.to_string().bold());
+                    let SecretListResponse {
+                        total_count,
+                        secrets,
+                    } = repo.get_all_secrets().await?;
+                    let secrets = secrets
+                        .iter()
+                        .map(|s| format!("|{}|{}|{}", s.name, s.created_at, s.updated_at))
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    printmd("## Secrets");
+                    printmd(&format!("**Total: {}", total_count));
+                    printmd(&format!(
+                        r#"|:-:|:-:|:-:
+|**Name**|**Created At**|**Updated At**|
+|-:|:-:|:-
+{}
+|-"#,
+                        secrets
+                    ));
                 }
                 ("get", Some(secret_key), _) => {
-                    let secret = repo.get_a_secret(&secret_key).await?;
-                    println!("Secret:\n\n{}", secret.to_string().bold());
+                    let Secret {
+                        name,
+                        created_at,
+                        updated_at,
+                    } = repo.get_a_secret(&secret_key).await?;
+                    printmd("## Secret");
+                    printmd(&format!("**Name**: {}", name));
+                    printmd(&format!("**Created At**: {}", created_at));
+                    printmd(&format!("**Updated At**: {}", updated_at));
                 }
                 (action, Some(secret_key), Some(secret_value))
                     if ["add", "update"].contains(&action) =>

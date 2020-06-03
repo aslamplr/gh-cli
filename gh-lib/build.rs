@@ -37,7 +37,7 @@ fn generate_code(query_path: &str) -> anyhow::Result<()> {
         .expect("[build.rs] Module token stream generation failed!");
 
     let gen = quote::quote! {
-      type DateTime = String;
+      type DateTime = chrono::DateTime<chrono::Utc>;
       type URI = String;
       #gen
     };
