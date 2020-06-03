@@ -6,6 +6,54 @@ use gh_lib::core::{
     secrets::{Secret, SecretListResponse, Secrets as _},
 };
 
+macro_rules! printmd {
+    ($($arg:tt)*) => ({
+        printmd(&format!($($arg)*));
+    })
+}
+
+fn printmd(md: &str) {
+    use crossterm::style::{Attribute, Color};
+    use termimad::{rgb, MadSkin, StyledChar};
+    lazy_static::lazy_static! {
+        static ref TERM_SKIN: MadSkin = {
+            let mut skin = MadSkin::default();
+            skin.set_headers_fg(Color::DarkCyan);
+            skin.headers.iter_mut().for_each(|h| h.add_attr(Attribute::Bold));
+            skin.headers[0].set_fg(Color::Yellow);
+            skin.headers[0].set_bg(Color::DarkCyan);
+            skin.bold.set_fg(Color::DarkYellow);
+            skin.italic.set_fgbg(Color::Magenta, rgb(30, 30, 40));
+            skin.bullet = StyledChar::from_fg_char(Color::Yellow, '⟡');
+            skin.quote_mark.set_fg(Color::Yellow);
+            skin
+        };
+    }
+    TERM_SKIN.print_text(md);
+}
+
+fn get_git_addr_from_repo() -> anyhow::Result<String> {
+    let output = std::process::Command::new("git")
+        .args(&["config", "--get", "remote.origin.url"])
+        .output()?
+        .stdout;
+    lazy_static::lazy_static! {
+        static ref RE: regex::Regex = regex::Regex::new(r"github\.com[:/](\S+)/(\S+)\.git").unwrap();
+    }
+    let regex_cap_err = || anyhow::anyhow!("Unable to capture github git repo!");
+    RE.captures(std::str::from_utf8(&output)?)
+        .and_then(|caps| {
+            match (
+                caps.get(1).map(|c| c.as_str()),
+                caps.get(2).map(|c| c.as_str()),
+            ) {
+                (Some(owner), Some(name)) => Some(format!("{}/{}", owner, name)),
+                _ => None,
+            }
+        })
+        .ok_or_else(regex_cap_err)
+}
+
 lazy_static::lazy_static! {
     static ref GIT_REPO_ADDR_FROM_REPO: anyhow::Result<String> = get_git_addr_from_repo();
     static ref REPO_ADDR: &'static str = GIT_REPO_ADDR_FROM_REPO.as_ref().map_or_else(|_| "", |addr| addr);
@@ -15,7 +63,7 @@ lazy_static::lazy_static! {
 #[derive(Clap)]
 #[clap(
     name = "GitHub CLI",
-    version = "v0.3.1",
+    version = concat!("v", clap::crate_version!()),
     author = "Aslam Ahammed A. <aslamplr@gmail.com>",
     about = r#"Yet another unofficial GitHub CLI!
 Minimalistic, opinionated, and unofficial by default.
@@ -38,7 +86,7 @@ enum SubCommand {
 #[derive(Clap)]
 #[clap(
     name = "GitHub Repo CLI",
-    version = "v0.3.1",
+    version = concat!("v", clap::crate_version!()),
     author = "Aslam Ahammed A. <aslamplr@gmail.com>",
     about = "GitHub Repo CLI"
 )]
@@ -74,7 +122,7 @@ struct Repo {
 #[derive(Clap)]
 #[clap(
     name = "GitHub Actions Secrets CLI",
-    version = "v0.3.1",
+    version = concat!("v", clap::crate_version!()),
     author = "Aslam Ahammed A. <aslamplr@gmail.com>",
     about = "GitHub Actions Secrets CLI wrapper for GitHub Actions Secrets API"
 )]
@@ -187,7 +235,6 @@ async fn main() -> anyhow::Result<()> {
                 } else {
                     "".to_owned()
                 };
-                println!("Repo Basic Information:\n");
                 println!(
                     "{}",
                     format!(
@@ -206,13 +253,12 @@ async fn main() -> anyhow::Result<()> {
                     println!("{}", &description);
                 }
                 println!();
-                println!("Created on \t{}", created_at);
+                println!("Created at \t{}", created_at);
                 if let Some(pushed_at) = pushed_at {
-                    println!("Last commit on \t{}", pushed_at);
+                    println!("Last commit at \t{}", pushed_at);
                 }
                 if let Some(readme) = readme {
                     println!();
-                    println!("README:");
                     printmd("---");
                     printmd(&readme);
                     printmd("---");
@@ -242,15 +288,15 @@ async fn main() -> anyhow::Result<()> {
                         .collect::<Vec<_>>()
                         .join("\n");
                     printmd("## Secrets");
-                    printmd(&format!("**Total: {}", total_count));
-                    printmd(&format!(
+                    printmd!("**Total: {}", total_count);
+                    printmd!(
                         r#"|:-:|:-:|:-:
 |**Name**|**Created At**|**Updated At**|
 |-:|:-:|:-
 {}
 |-"#,
                         secrets
-                    ));
+                    );
                 }
                 ("get", Some(secret_key), _) => {
                     let Secret {
@@ -258,10 +304,10 @@ async fn main() -> anyhow::Result<()> {
                         created_at,
                         updated_at,
                     } = repo.get_a_secret(&secret_key).await?;
-                    printmd("## Secret");
-                    printmd(&format!("**Name**: {}", name));
-                    printmd(&format!("**Created At**: {}", created_at));
-                    printmd(&format!("**Updated At**: {}", updated_at));
+                    printmd!("## Secret");
+                    printmd!("**Name**:\t{}", name);
+                    printmd!("**Created At**:\t{}", created_at);
+                    printmd!("**Updated At**:\t{}", updated_at);
                 }
                 (action, Some(secret_key), Some(secret_value))
                     if ["add", "update"].contains(&action) =>
@@ -282,46 +328,4 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
-}
-
-fn get_git_addr_from_repo() -> anyhow::Result<String> {
-    let output = std::process::Command::new("git")
-        .args(&["config", "--get", "remote.origin.url"])
-        .output()?
-        .stdout;
-    lazy_static::lazy_static! {
-        static ref RE: regex::Regex = regex::Regex::new(r"github\.com[:/](\S+)/(\S+)\.git").unwrap();
-    }
-    let regex_cap_err = || anyhow::anyhow!("Unable to capture github git repo!");
-    RE.captures(std::str::from_utf8(&output)?)
-        .and_then(|caps| {
-            match (
-                caps.get(1).map(|c| c.as_str()),
-                caps.get(2).map(|c| c.as_str()),
-            ) {
-                (Some(owner), Some(name)) => Some(format!("{}/{}", owner, name)),
-                _ => None,
-            }
-        })
-        .ok_or_else(regex_cap_err)
-}
-
-fn printmd(md: &str) {
-    use crossterm::style::{Attribute, Color};
-    use termimad::{rgb, MadSkin, StyledChar};
-    lazy_static::lazy_static! {
-        static ref TERM_SKIN: MadSkin = {
-            let mut skin = MadSkin::default();
-            skin.set_headers_fg(Color::DarkCyan);
-            skin.headers.iter_mut().for_each(|h| h.add_attr(Attribute::Bold));
-            skin.headers[0].set_fg(Color::Yellow);
-            skin.headers[0].set_bg(Color::DarkCyan);
-            skin.bold.set_fg(Color::DarkYellow);
-            skin.italic.set_fgbg(Color::Magenta, rgb(30, 30, 40));
-            skin.bullet = StyledChar::from_fg_char(Color::Yellow, '⟡');
-            skin.quote_mark.set_fg(Color::Yellow);
-            skin
-        };
-    }
-    TERM_SKIN.print_text(md);
 }
