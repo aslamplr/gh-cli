@@ -45,35 +45,15 @@ impl Secrets for RepoRequest<'_> {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Secret {
-    name: String,
-    created_at: String,
-    updated_at: String,
-}
-
-impl std::fmt::Display for Secret {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            serde_json::to_string_pretty(&self).unwrap_or_default()
-        )
-    }
+    pub name: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct SecretListResponse {
-    total_count: u32,
-    secrets: Vec<Secret>,
-}
-
-impl std::fmt::Display for SecretListResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            serde_json::to_string_pretty(&self).unwrap_or_default()
-        )
-    }
+    pub total_count: u32,
+    pub secrets: Vec<Secret>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
