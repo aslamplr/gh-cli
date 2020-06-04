@@ -79,8 +79,14 @@ impl HttpResponse {
     }
 
     pub async fn body(self) -> Result<String> {
+        let status = self.status();
         let body = to_bytes(self.inner).await?;
-        Ok(std::str::from_utf8(body.bytes())?.into())
+        let body = std::str::from_utf8(body.bytes())?.into();
+        if status.is_success() {
+            Ok(body)
+        } else {
+            Err(anyhow!("[{}] {}", status, body))
+        }
     }
 }
 
