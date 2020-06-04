@@ -47,10 +47,7 @@ impl OAuthFlow<'_> {
         let addr = listener.local_addr()?;
         let query = url::form_urlencoded::Serializer::new(String::new())
             .append_pair("client_id", self.client_id)
-            .append_pair(
-                "redirect_uri",
-                &format!("http://{}/callback", addr),
-            )
+            .append_pair("redirect_uri", &format!("http://{}/callback", addr))
             .append_pair("scope", &self.scopes.join(" "))
             .append_pair("state", &state)
             .finish();
