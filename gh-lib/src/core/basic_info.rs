@@ -6,6 +6,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use graphql_client::GraphQLQuery as _;
 
+#[cfg(not(test))]
 const BASE_URL: &str = "https://api.github.com/repos";
 
 pub type BasicInfoResponse = basic_info_response::ResponseData;
@@ -38,7 +39,7 @@ impl BasicInfo for RepoRequest<'_> {
     async fn get_raw_readme(&self) -> Result<String> {
         let RepoRequest(repo, auth_token) = self;
         let resp = request(
-            &format!("{}/{}/readme", BASE_URL, repo),
+            &with_base_url!("{}/readme", repo),
             HttpMethod::GET,
             auth_token,
         )
@@ -46,5 +47,104 @@ impl BasicInfo for RepoRequest<'_> {
         .call()
         .await?;
         resp.body().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::basic_info_response::*;
+    use super::*;
+    use mockito::{mock, Matcher};
+
+    #[tokio::test]
+    async fn get_basic_info() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("POST", "/graphql")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{
+                "data": {
+                  "repository": {
+                    "nameWithOwner": "aslamplr/gh-cli",
+                    "description": "🖥 Yet another unofficial GitHub CLI! Minimalistic, opinionated, and unofficial by default.",
+                    "createdAt": "2020-04-15T23:59:51Z",
+                    "pushedAt": "2020-06-04T06:35:57Z",
+                    "homepageUrl": "https://github.com/aslamplr/gh-cli#gh-cli",
+                    "isPrivate": false,
+                    "isArchived": false,
+                    "primaryLanguage": {
+                      "name": "Rust"
+                    },
+                    "licenseInfo": {
+                      "name": "MIT License"
+                    },
+                    "stargazers": {
+                      "totalCount": 1
+                    }
+                  }
+                }
+              }"#)
+            .expect(1)
+            .create();
+
+        let expected_basic_info = BasicInfoResponse {
+            repository: Some(RepoBasicInfoQueryRepository {
+                name_with_owner: "aslamplr/gh-cli".into(),
+                description: Some("🖥 Yet another unofficial GitHub CLI! Minimalistic, opinionated, and unofficial by default.".into()),
+                created_at: "2020-04-15T23:59:51Z".parse()?,
+                pushed_at: Some("2020-06-04T06:35:57Z".parse()?),
+                homepage_url: Some("https://github.com/aslamplr/gh-cli#gh-cli".into()),
+                is_private: false,
+                is_archived: false,
+                primary_language: Some(RepoBasicInfoQueryRepositoryPrimaryLanguage {
+                    name: "Rust".into()
+                }),
+                license_info: Some(RepoBasicInfoQueryRepositoryLicenseInfo {
+                    name: "MIT License".into()
+                }),
+                stargazers: RepoBasicInfoQueryRepositoryStargazers {
+                    total_count: 1
+                }
+            })
+
+        };
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let basic_info = repo_req.get_basic_info().await?;
+
+        m.assert();
+        assert_eq!(basic_info, expected_basic_info);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_raw_readme() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/readme")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .match_header("Accept", "application/vnd.github.VERSION.raw")
+            .with_status(201)
+            .with_body(r#"# Readme "#)
+            .expect(1)
+            .create();
+
+        let expected_output = "# Readme ".to_string();
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let output = repo_req.get_raw_readme().await?;
+
+        m.assert();
+        assert_eq!(output, expected_output);
+        Ok(())
     }
 }

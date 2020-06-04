@@ -31,12 +31,13 @@ fn generate_code(query_path: &str) -> anyhow::Result<()> {
         }
         .into(),
     );
-    options.set_response_derives(String::from("Serialize"));
+    options.set_response_derives(String::from("Serialize,PartialEq,Debug"));
     let schema_path = PathBuf::from(SCHEMA_DOWNLOAD_PATH);
     let gen = generate_module_token_stream(query_path.clone(), &schema_path, options)
         .expect("[build.rs] Module token stream generation failed!");
 
     let gen = quote::quote! {
+      #[allow(clippy::redundant_static_lifetimes)]
       type DateTime = chrono::DateTime<chrono::Utc>;
       type URI = String;
       #gen
