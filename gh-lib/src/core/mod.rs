@@ -15,4 +15,5 @@ macro_rules! with_base_url {
 pub mod basic_info;
 pub mod repos;
 pub mod secrets;
+pub mod workflow_jobs;
 pub mod workflows;

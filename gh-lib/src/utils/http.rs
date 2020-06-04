@@ -78,6 +78,14 @@ impl HttpResponse {
         self.inner.status()
     }
 
+    pub fn get_header(&self, key: &str) -> Option<String> {
+        self.inner
+            .headers()
+            .get(key)
+            .and_then(|x| x.to_str().ok())
+            .map(String::from)
+    }
+
     pub async fn body(self) -> Result<String> {
         let status = self.status();
         let body = to_bytes(self.inner).await?;
