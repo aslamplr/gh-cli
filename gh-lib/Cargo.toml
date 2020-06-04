@@ -26,3 +26,7 @@ curl = "0.4.29"
 graphql_client_codegen = "0.9.0"
 syn = "1.0"
 quote = "1.0"
+
+[dev-dependencies]
+tokio = { version = "0.2", features = ["full"] }
+mockito = "0.25"
