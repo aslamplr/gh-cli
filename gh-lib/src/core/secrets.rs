@@ -7,6 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(test))]
 const BASE_URL: &str = "https://api.github.com/repos";
 
 #[async_trait]
@@ -43,26 +44,26 @@ impl Secrets for RepoRequest<'_> {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Secret {
     pub name: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct SecretListResponse {
     pub total_count: u32,
     pub secrets: Vec<Secret>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct PublicKeyResponse {
     key_id: String,
     key: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 struct SecretSaveRequest {
     #[serde(skip_serializing)]
     key: String,
@@ -95,7 +96,7 @@ where
     T: serde::de::DeserializeOwned,
 {
     let RepoRequest(repo, auth_token) = params;
-    let url = format!("{}/{}/{}", BASE_URL, repo, path);
+    let url = with_base_url!("{}/{}", repo, path);
     let resp = get(&url, &auth_token).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
@@ -119,7 +120,7 @@ async fn put_gh_secret(
     secret_save_req: &SecretSaveRequest,
 ) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
-    let url = format!("{}/{}/actions/secrets/{}", BASE_URL, repo, secret_key);
+    let url = with_base_url!("{}/actions/secrets/{}", repo, secret_key);
     put(
         &url,
         HttpBody::try_from_serialize(&secret_save_req)?,
@@ -131,7 +132,189 @@ async fn put_gh_secret(
 
 async fn delete_a_secret(params: &RepoRequest<'_>, secret_key: &str) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
-    let url = format!("{}/{}/actions/secrets/{}", BASE_URL, repo, secret_key);
+    let url = with_base_url!("{}/actions/secrets/{}", repo, secret_key);
     delete(&url, &auth_token).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::{mock, Matcher};
+
+    #[tokio::test]
+    async fn get_all_secrets() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/actions/secrets")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                "total_count": 2,
+                "secrets": [
+                  {
+                    "name": "GH_TOKEN",
+                    "created_at": "2019-08-10T14:59:22Z",
+                    "updated_at": "2020-01-10T14:59:22Z"
+                  },
+                  {
+                    "name": "GIST_ID",
+                    "created_at": "2020-01-10T10:59:22Z",
+                    "updated_at": "2020-01-11T11:59:22Z"
+                  }
+                ]
+              }"#,
+            )
+            .expect(1)
+            .create();
+
+        let expected_secrets = SecretListResponse {
+            total_count: 2,
+            secrets: vec![
+                Secret {
+                    name: "GH_TOKEN".into(),
+                    created_at: "2019-08-10T14:59:22Z".parse()?,
+                    updated_at: "2020-01-10T14:59:22Z".parse()?,
+                },
+                Secret {
+                    name: "GIST_ID".into(),
+                    created_at: "2020-01-10T10:59:22Z".parse()?,
+                    updated_at: "2020-01-11T11:59:22Z".parse()?,
+                },
+            ],
+        };
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let secrets = repo_req.get_all_secrets().await?;
+
+        m.assert();
+        assert_eq!(secrets, expected_secrets);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_a_secret() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/actions/secrets/GH_TOKEN")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "name": "GH_TOKEN",
+                    "created_at": "2019-08-10T14:59:22Z",
+                    "updated_at": "2020-01-10T14:59:22Z"
+                  }"#,
+            )
+            .expect(1)
+            .create();
+
+        let expected_secret = Secret {
+            name: "GH_TOKEN".into(),
+            created_at: "2019-08-10T14:59:22Z".parse()?,
+            updated_at: "2020-01-10T14:59:22Z".parse()?,
+        };
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let secret = repo_req.get_a_secret("GH_TOKEN").await?;
+
+        m.assert();
+        assert_eq!(secret, expected_secret);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_public_key() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/actions/secrets/public-key")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "key_id": "012345678912345678",
+                    "key": "2Sg8iYjAxxmI2LvUXpJjkYrMxURPc8r+dB7TJyvv1234"
+                  }"#,
+            )
+            .expect(1)
+            .create();
+
+        let expected_public_key = PublicKeyResponse {
+            key_id: "012345678912345678".into(),
+            key: "2Sg8iYjAxxmI2LvUXpJjkYrMxURPc8r+dB7TJyvv1234".into(),
+        };
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let public_key = repo_req.get_public_key().await?;
+
+        m.assert();
+        assert_eq!(public_key, expected_public_key);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn save_secret() -> Result<()> {
+        let public_key_base64 = {
+            use sodiumoxide::crypto::box_::{curve25519xsalsa20poly1305::PublicKey, gen_keypair};
+
+            let (pk, _) = gen_keypair();
+            let PublicKey(pk_bytes) = pk;
+            base64::encode(pk_bytes)
+        };
+
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m1 = mock("GET", "/aslamplr/gh-cli/actions/secrets/public-key")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(&format!(
+                r#"{{
+                "key_id": "012345678912345678",
+                "key": "{}"
+              }}"#,
+                public_key_base64
+            ))
+            .expect(1)
+            .create();
+
+        let m2 = mock("PUT", "/aslamplr/gh-cli/actions/secrets/GH_TOKEN")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .match_body(Matcher::Regex("encrypted_value".to_string()))
+            .match_body(Matcher::Regex("key_id".to_string()))
+            .match_body(Matcher::Regex("012345678912345678".to_string()))
+            .with_status(201)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        repo_req.save_secret("GH_TOKEN", "SECRET").await?;
+
+        m1.assert();
+        m2.assert();
+        Ok(())
+    }
 }
