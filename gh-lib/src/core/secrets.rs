@@ -14,9 +14,9 @@ const BASE_URL: &str = "https://api.github.com/repos";
 pub trait Secrets {
     async fn get_public_key(&self) -> Result<PublicKeyResponse>;
     async fn get_all_secrets(&self) -> Result<SecretListResponse>;
-    async fn get_a_secret(&self, secret_key: &str) -> Result<Secret>;
-    async fn save_secret(&self, secret_key: &str, secret_value: &str) -> Result<()>;
-    async fn delete_a_secret(&self, secret_key: &str) -> Result<()>;
+    async fn get_a_secret(&self, name: &str) -> Result<Secret>;
+    async fn save_secret(&self, name: &str, value: &str) -> Result<()>;
+    async fn delete_a_secret(&self, name: &str) -> Result<()>;
 }
 
 #[async_trait]
@@ -29,18 +29,18 @@ impl Secrets for RepoRequest<'_> {
         get_all_secrets(&self).await
     }
 
-    async fn get_a_secret(&self, secret_key: &str) -> Result<Secret> {
-        get_a_secret(&self, &secret_key).await
+    async fn get_a_secret(&self, name: &str) -> Result<Secret> {
+        get_a_secret(&self, &name).await
     }
 
-    async fn save_secret(&self, secret_key: &str, secret_value: &str) -> Result<()> {
+    async fn save_secret(&self, name: &str, value: &str) -> Result<()> {
         let public_key = self.get_public_key().await?;
-        let secret_save_req = SecretSaveRequest::from(secret_key, secret_value, public_key)?;
+        let secret_save_req = SecretSaveRequest::from(name, value, public_key)?;
         secret_save_req.make_api_call(&self).await
     }
 
-    async fn delete_a_secret(&self, secret_key: &str) -> Result<()> {
-        delete_a_secret(&self, secret_key).await
+    async fn delete_a_secret(&self, name: &str) -> Result<()> {
+        delete_a_secret(&self, name).await
     }
 }
 
@@ -110,17 +110,17 @@ async fn get_all_secrets(params: &RepoRequest<'_>) -> Result<SecretListResponse>
     get_from_gh("actions/secrets", &params).await
 }
 
-async fn get_a_secret(params: &RepoRequest<'_>, secret_key: &str) -> Result<Secret> {
-    get_from_gh(&format!("actions/secrets/{}", secret_key), &params).await
+async fn get_a_secret(params: &RepoRequest<'_>, name: &str) -> Result<Secret> {
+    get_from_gh(&format!("actions/secrets/{}", name), &params).await
 }
 
 async fn put_gh_secret(
     params: &RepoRequest<'_>,
-    secret_key: &str,
+    name: &str,
     secret_save_req: &SecretSaveRequest,
 ) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
-    let url = with_base_url!("{}/actions/secrets/{}", repo, secret_key);
+    let url = with_base_url!("{}/actions/secrets/{}", repo, name);
     put(
         &url,
         HttpBody::try_from_serialize(&secret_save_req)?,
@@ -130,9 +130,9 @@ async fn put_gh_secret(
     Ok(())
 }
 
-async fn delete_a_secret(params: &RepoRequest<'_>, secret_key: &str) -> Result<()> {
+async fn delete_a_secret(params: &RepoRequest<'_>, name: &str) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
-    let url = with_base_url!("{}/actions/secrets/{}", repo, secret_key);
+    let url = with_base_url!("{}/actions/secrets/{}", repo, name);
     delete(&url, &auth_token).await?;
     Ok(())
 }
