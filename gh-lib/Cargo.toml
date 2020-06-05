@@ -19,6 +19,7 @@ sodiumoxide = "0.2.5"
 base64 = "0.12.0"
 async-trait = "0.1.30"
 graphql_client = "0.9.0"
+url = "2.1"
 
 [build-dependencies]
 anyhow = "1.0"
