@@ -151,17 +151,53 @@ struct Secrets {
         hide_default_value = true,
     )]
     name: String,
-    #[clap(long = "action", short = "a", value_name = "ACTION", possible_values = &["list", "get", "add", "update", "delete"], display_order = 4, takes_value = true, required = true)]
-    action: String,
-    #[clap(long = "secret_key", value_name = "SECRET_KEY", takes_value = true, required_ifs = &[
-        ("action", "add"),
-        ("action", "update"),
-        ("action", "get"),
-        ("action", "delete"),
-    ])]
-    secret_key: Option<String>,
-    #[clap(long = "secret_value", value_name = "SECRET_VALUE", takes_value = true, required_ifs = &[("action", "add"), ("action", "update")])]
-    secret_value: Option<String>,
+    #[clap(subcommand)]
+    subcmd: SecretsSubCommand,
+}
+
+#[derive(Clap)]
+enum SecretsSubCommand {
+    #[clap(about = "List all secrets")]
+    List,
+    #[clap(about = "Print a secret")]
+    Get(SecretsName),
+    #[clap(about = "Add a new secret")]
+    Add(SecretsNameValue),
+    #[clap(about = "Update a secret")]
+    Update(SecretsNameValue),
+    #[clap(about = "Update a secret (an alias for update)")]
+    Edit(SecretsNameValue),
+    #[clap(about = "Delete a secret")]
+    Delete(SecretsName),
+}
+
+impl std::fmt::Display for SecretsSubCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let act = match self {
+            SecretsSubCommand::List => "list",
+            SecretsSubCommand::Get(_) => "get",
+            SecretsSubCommand::Add(_) | SecretsSubCommand::Update(_) | SecretsSubCommand::Edit(_) => {
+                "save"
+            }
+            SecretsSubCommand::Delete(_) => "delete",
+        };
+        write!(f, "{}", act)?;
+        Ok(())
+    }
+}
+
+#[derive(Clap)]
+struct SecretsName {
+    #[clap(name = "SECRET_NAME", index = 1)]
+    name: String,
+}
+
+#[derive(Clap)]
+struct SecretsNameValue {
+    #[clap(name = "SECRET_NAME", index = 1)]
+    name: String,
+    #[clap(name = "SECRET_VALUE", index = 2)]
+    value: String,
 }
 
 #[tokio::main]
@@ -269,15 +305,13 @@ async fn main() -> anyhow::Result<()> {
             let Secrets {
                 name,
                 auth_token,
-                action,
-                secret_key,
-                secret_value,
+                subcmd,
             } = secrets;
 
             let repo = RepoRequest::try_from(&name, &auth_token)?;
 
-            match (action.as_ref(), secret_key, secret_value) {
-                ("list", _, _) => {
+            match &subcmd {
+                SecretsSubCommand::List => {
                     let SecretListResponse {
                         total_count,
                         secrets,
@@ -298,31 +332,31 @@ async fn main() -> anyhow::Result<()> {
                         secrets
                     );
                 }
-                ("get", Some(secret_key), _) => {
+                SecretsSubCommand::Get(SecretsName { name }) => {
                     let Secret {
                         name,
                         created_at,
                         updated_at,
-                    } = repo.get_a_secret(&secret_key).await?;
+                    } = repo.get_a_secret(&name).await?;
                     printmd!("## Secret");
                     printmd!("**Name**:\t{}", name);
                     printmd!("**Created At**:\t{}", created_at);
                     printmd!("**Updated At**:\t{}", updated_at);
                 }
-                (action, Some(secret_key), Some(secret_value))
-                    if ["add", "update"].contains(&action) =>
-                {
-                    repo.save_secret(&secret_key, &secret_value).await?;
+                SecretsSubCommand::Add(name_value)
+                | SecretsSubCommand::Update(name_value)
+                | SecretsSubCommand::Edit(name_value) => {
+                    let SecretsNameValue { name, value } = name_value;
+                    repo.save_secret(&name, &value).await?;
                     println!(
                         "{}",
-                        format!("Secret {} successful!", action).bold().green()
+                        format!("Secret {} successful!", &subcmd).bold().green()
                     );
                 }
-                ("delete", Some(secret_key), _) => {
-                    repo.delete_a_secret(&secret_key).await?;
+                SecretsSubCommand::Delete(SecretsName { name }) => {
+                    repo.delete_a_secret(&name).await?;
                     println!("{}", "Secret delete successful!".bold().green());
                 }
-                _ => {}
             }
         }
     }
