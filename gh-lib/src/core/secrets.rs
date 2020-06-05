@@ -317,4 +317,26 @@ mod tests {
         m2.assert();
         Ok(())
     }
+
+    #[tokio::test]
+    async fn delete_a_secret() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("DELETE", "/aslamplr/gh-cli/actions/secrets/GH_TOKEN")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(204)
+            .with_header("content-type", "application/json")
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        repo_req.delete_a_secret("GH_TOKEN").await?;
+
+        m.assert();
+        Ok(())
+    }
 }
