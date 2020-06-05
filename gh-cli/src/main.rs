@@ -176,9 +176,9 @@ impl std::fmt::Display for SecretsSubCommand {
         let act = match self {
             SecretsSubCommand::List => "list",
             SecretsSubCommand::Get(_) => "get",
-            SecretsSubCommand::Add(_) | SecretsSubCommand::Update(_) | SecretsSubCommand::Edit(_) => {
-                "save"
-            }
+            SecretsSubCommand::Add(_)
+            | SecretsSubCommand::Update(_)
+            | SecretsSubCommand::Edit(_) => "save",
             SecretsSubCommand::Delete(_) => "delete",
         };
         write!(f, "{}", act)?;
