@@ -16,12 +16,18 @@ pub trait Workflows {
         workflow_id: i32,
         params: WorkflowRunQueryParams<'_>,
     ) -> Result<WorkflowRunList>;
+    async fn get_all_workflow_runs(&self) -> Result<WorkflowRunList>;
+    async fn get_all_workflow_runs_with_params(
+        &self,
+        params: WorkflowRunQueryParams<'_>,
+    ) -> Result<WorkflowRunList>;
+    async fn get_a_workflow_run(&self, run_id: i32) -> Result<WorkflowRun>;
 }
 
 #[async_trait]
 impl Workflows for RepoRequest<'_> {
     async fn get_workflow_runs(&self, workflow_id: i32) -> Result<WorkflowRunList> {
-        get_workflow_runs(&self, workflow_id, None).await
+        get_workflow_runs(&self, Some(workflow_id), None).await
     }
 
     async fn get_workflow_runs_with_params(
@@ -29,7 +35,22 @@ impl Workflows for RepoRequest<'_> {
         workflow_id: i32,
         params: WorkflowRunQueryParams<'_>,
     ) -> Result<WorkflowRunList> {
-        get_workflow_runs(&self, workflow_id, Some(&params)).await
+        get_workflow_runs(&self, Some(workflow_id), Some(&params)).await
+    }
+
+    async fn get_all_workflow_runs(&self) -> Result<WorkflowRunList> {
+        get_workflow_runs(&self, None, None).await
+    }
+
+    async fn get_all_workflow_runs_with_params(
+        &self,
+        params: WorkflowRunQueryParams<'_>,
+    ) -> Result<WorkflowRunList> {
+        get_workflow_runs(&self, None, Some(&params)).await
+    }
+
+    async fn get_a_workflow_run(&self, run_id: i32) -> Result<WorkflowRun> {
+        get_a_workflow_run(&self, run_id).await
     }
 }
 
@@ -167,29 +188,44 @@ pub struct Repository {
 
 async fn get_workflow_runs(
     params: &RepoRequest<'_>,
-    workflow_id: i32,
+    workflow_id: Option<i32>,
     filter: Option<&WorkflowRunQueryParams<'_>>,
 ) -> Result<WorkflowRunList> {
     let RepoRequest(repo, auth_token) = params;
-    let url = with_base_url!("{}/actions/workflows/{}/runs", repo, workflow_id);
+    let url = if let Some(workflow_id) = workflow_id {
+        with_base_url!("{}/actions/workflows/{}/runs", repo, workflow_id)
+    } else {
+        with_base_url!("{}/actions/runs", repo)
+    };
     let url = if let Some(filter) = filter {
-        let mut serializer = Serializer::new(String::new());
-        if let Some(actor) = filter.actor {
-            serializer.append_pair("actor", actor);
-        }
-        if let Some(branch) = filter.branch {
-            serializer.append_pair("branch", branch);
-        }
-        if let Some(status) = filter.status {
-            serializer.append_pair("status", status);
-        }
-        if let Some(event) = filter.event {
-            serializer.append_pair("event", event);
-        }
-        format!("{}?{}", url, serializer.finish())
+        let query = {
+            let mut serializer = Serializer::new(String::new());
+            if let Some(actor) = filter.actor {
+                serializer.append_pair("actor", actor);
+            }
+            if let Some(branch) = filter.branch {
+                serializer.append_pair("branch", branch);
+            }
+            if let Some(status) = filter.status {
+                serializer.append_pair("status", status);
+            }
+            if let Some(event) = filter.event {
+                serializer.append_pair("event", event);
+            }
+            serializer.finish()
+        };
+        format!("{}?{}", url, query)
     } else {
         url
     };
+    let resp = get(&url, &auth_token).await?;
+    let resp = resp.deserialize().await?;
+    Ok(resp)
+}
+
+async fn get_a_workflow_run(params: &RepoRequest<'_>, run_id: i32) -> Result<WorkflowRun> {
+    let RepoRequest(repo, auth_token) = params;
+    let url = with_base_url!("{}/actions/runs/{}", repo, run_id);
     let resp = get(&url, &auth_token).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
@@ -617,6 +653,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn get_all_workflow_runs() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = create_mock_http("/aslamplr/gh-cli/actions/runs", auth_token);
+
+        let expected_run_list = create_expected_run_list()?;
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let run_list = repo_req.get_all_workflow_runs().await?;
+
+        m.assert();
+        assert_eq!(run_list, expected_run_list);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn get_workflow_runs_with_params() -> Result<()> {
         let repo_addr = "aslamplr/gh-cli";
         let auth_token = "auth_secret_token";
@@ -643,6 +696,229 @@ mod tests {
 
         m.assert();
         assert_eq!(run_list, expected_run_list);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_all_workflow_runs_with_params() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = create_mock_http_check_param("/aslamplr/gh-cli/actions/runs", auth_token);
+
+        let expected_run_list = create_expected_run_list()?;
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let run_list = repo_req
+            .get_all_workflow_runs_with_params(WorkflowRunQueryParams {
+                actor: Some("aslamplr"),
+                branch: Some("master"),
+                event: Some("push"),
+                status: Some("success"),
+            })
+            .await?;
+
+        m.assert();
+        assert_eq!(run_list, expected_run_list);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_a_workflow_run() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/actions/runs/30433642")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "id": 30433642,
+                    "node_id": "MDEyOldvcmtmbG93IFJ1bjI2OTI4OQ==",
+                    "head_branch": "master",
+                    "head_sha": "acb5820ced9479c074f688cc328bf03f341a511d",
+                    "run_number": 562,
+                    "event": "push",
+                    "status": "queued",
+                    "conclusion": null,
+                    "workflow_id": 159038,
+                    "url": "https://api.github.com/repos/octo-org/octo-repo/actions/runs/30433642",
+                    "html_url": "https://github.com/octo-org/octo-repo/actions/runs/30433642",
+                    "pull_requests": [
+                  
+                    ],
+                    "created_at": "2020-01-22T19:33:08Z",
+                    "updated_at": "2020-01-22T19:33:08Z",
+                    "jobs_url": "https://api.github.com/repos/octo-org/octo-repo/actions/runs/30433642/jobs",
+                    "logs_url": "https://api.github.com/repos/octo-org/octo-repo/actions/runs/30433642/logs",
+                    "check_suite_url": "https://api.github.com/repos/octo-org/octo-repo/check-suites/414944374",
+                    "artifacts_url": "https://api.github.com/repos/octo-org/octo-repo/actions/runs/30433642/artifacts",
+                    "cancel_url": "https://api.github.com/repos/octo-org/octo-repo/actions/runs/30433642/cancel",
+                    "rerun_url": "https://api.github.com/repos/octo-org/octo-repo/actions/runs/30433642/rerun",
+                    "workflow_url": "https://api.github.com/repos/octo-org/octo-repo/actions/workflows/159038",
+                    "head_commit": {
+                      "id": "acb5820ced9479c074f688cc328bf03f341a511d",
+                      "tree_id": "d23f6eedb1e1b9610bbc754ddb5197bfe7271223",
+                      "message": "Create linter.yml",
+                      "timestamp": "2020-01-22T19:33:05Z",
+                      "author": {
+                        "name": "Octo Cat",
+                        "email": "octocat@github.com"
+                      },
+                      "committer": {
+                        "name": "GitHub",
+                        "email": "noreply@github.com"
+                      }
+                    },
+                    "repository": {
+                      "id": 1296269,
+                      "node_id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+                      "name": "Hello-World",
+                      "full_name": "octocat/Hello-World",
+                      "owner": {
+                        "login": "octocat",
+                        "id": 1,
+                        "node_id": "MDQ6VXNlcjE=",
+                        "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+                        "gravatar_id": "",
+                        "url": "https://api.github.com/users/octocat",
+                        "html_url": "https://github.com/octocat",
+                        "followers_url": "https://api.github.com/users/octocat/followers",
+                        "following_url": "https://api.github.com/users/octocat/following{/other_user}",
+                        "gists_url": "https://api.github.com/users/octocat/gists{/gist_id}",
+                        "starred_url": "https://api.github.com/users/octocat/starred{/owner}{/repo}",
+                        "subscriptions_url": "https://api.github.com/users/octocat/subscriptions",
+                        "organizations_url": "https://api.github.com/users/octocat/orgs",
+                        "repos_url": "https://api.github.com/users/octocat/repos",
+                        "events_url": "https://api.github.com/users/octocat/events{/privacy}",
+                        "received_events_url": "https://api.github.com/users/octocat/received_events",
+                        "type": "User",
+                        "site_admin": false
+                      },
+                      "private": false,
+                      "html_url": "https://github.com/octocat/Hello-World",
+                      "description": "This your first repo!",
+                      "fork": false,
+                      "url": "https://api.github.com/repos/octocat/Hello-World",
+                      "archive_url": "http://api.github.com/repos/octocat/Hello-World/{archive_format}{/ref}",
+                      "assignees_url": "http://api.github.com/repos/octocat/Hello-World/assignees{/user}",
+                      "blobs_url": "http://api.github.com/repos/octocat/Hello-World/git/blobs{/sha}",
+                      "branches_url": "http://api.github.com/repos/octocat/Hello-World/branches{/branch}",
+                      "collaborators_url": "http://api.github.com/repos/octocat/Hello-World/collaborators{/collaborator}",
+                      "comments_url": "http://api.github.com/repos/octocat/Hello-World/comments{/number}",
+                      "commits_url": "http://api.github.com/repos/octocat/Hello-World/commits{/sha}",
+                      "compare_url": "http://api.github.com/repos/octocat/Hello-World/compare/{base}...{head}",
+                      "contents_url": "http://api.github.com/repos/octocat/Hello-World/contents/{+path}",
+                      "contributors_url": "http://api.github.com/repos/octocat/Hello-World/contributors",
+                      "deployments_url": "http://api.github.com/repos/octocat/Hello-World/deployments",
+                      "downloads_url": "http://api.github.com/repos/octocat/Hello-World/downloads",
+                      "events_url": "http://api.github.com/repos/octocat/Hello-World/events",
+                      "forks_url": "http://api.github.com/repos/octocat/Hello-World/forks",
+                      "git_commits_url": "http://api.github.com/repos/octocat/Hello-World/git/commits{/sha}",
+                      "git_refs_url": "http://api.github.com/repos/octocat/Hello-World/git/refs{/sha}",
+                      "git_tags_url": "http://api.github.com/repos/octocat/Hello-World/git/tags{/sha}",
+                      "git_url": "git:github.com/octocat/Hello-World.git",
+                      "issue_comment_url": "http://api.github.com/repos/octocat/Hello-World/issues/comments{/number}",
+                      "issue_events_url": "http://api.github.com/repos/octocat/Hello-World/issues/events{/number}",
+                      "issues_url": "http://api.github.com/repos/octocat/Hello-World/issues{/number}",
+                      "keys_url": "http://api.github.com/repos/octocat/Hello-World/keys{/key_id}",
+                      "labels_url": "http://api.github.com/repos/octocat/Hello-World/labels{/name}",
+                      "languages_url": "http://api.github.com/repos/octocat/Hello-World/languages",
+                      "merges_url": "http://api.github.com/repos/octocat/Hello-World/merges",
+                      "milestones_url": "http://api.github.com/repos/octocat/Hello-World/milestones{/number}",
+                      "notifications_url": "http://api.github.com/repos/octocat/Hello-World/notifications{?since,all,participating}",
+                      "pulls_url": "http://api.github.com/repos/octocat/Hello-World/pulls{/number}",
+                      "releases_url": "http://api.github.com/repos/octocat/Hello-World/releases{/id}",
+                      "ssh_url": "git@github.com:octocat/Hello-World.git",
+                      "stargazers_url": "http://api.github.com/repos/octocat/Hello-World/stargazers",
+                      "statuses_url": "http://api.github.com/repos/octocat/Hello-World/statuses/{sha}",
+                      "subscribers_url": "http://api.github.com/repos/octocat/Hello-World/subscribers",
+                      "subscription_url": "http://api.github.com/repos/octocat/Hello-World/subscription",
+                      "tags_url": "http://api.github.com/repos/octocat/Hello-World/tags",
+                      "teams_url": "http://api.github.com/repos/octocat/Hello-World/teams",
+                      "trees_url": "http://api.github.com/repos/octocat/Hello-World/git/trees{/sha}"
+                    },
+                    "head_repository": {
+                      "id": 217723378,
+                      "node_id": "MDEwOlJlcG9zaXRvcnkyMTc3MjMzNzg=",
+                      "name": "octo-repo",
+                      "full_name": "octo-org/octo-repo",
+                      "private": true,
+                      "owner": {
+                        "login": "octocat",
+                        "id": 1,
+                        "node_id": "MDQ6VXNlcjE=",
+                        "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+                        "gravatar_id": "",
+                        "url": "https://api.github.com/users/octocat",
+                        "html_url": "https://github.com/octocat",
+                        "followers_url": "https://api.github.com/users/octocat/followers",
+                        "following_url": "https://api.github.com/users/octocat/following{/other_user}",
+                        "gists_url": "https://api.github.com/users/octocat/gists{/gist_id}",
+                        "starred_url": "https://api.github.com/users/octocat/starred{/owner}{/repo}",
+                        "subscriptions_url": "https://api.github.com/users/octocat/subscriptions",
+                        "organizations_url": "https://api.github.com/users/octocat/orgs",
+                        "repos_url": "https://api.github.com/users/octocat/repos",
+                        "events_url": "https://api.github.com/users/octocat/events{/privacy}",
+                        "received_events_url": "https://api.github.com/users/octocat/received_events",
+                        "type": "User",
+                        "site_admin": false
+                      },
+                      "html_url": "https://github.com/octo-org/octo-repo",
+                      "description": null,
+                      "fork": false,
+                      "url": "https://api.github.com/repos/octo-org/octo-repo",
+                      "forks_url": "https://api.github.com/repos/octo-org/octo-repo/forks",
+                      "keys_url": "https://api.github.com/repos/octo-org/octo-repo/keys{/key_id}",
+                      "collaborators_url": "https://api.github.com/repos/octo-org/octo-repo/collaborators{/collaborator}",
+                      "teams_url": "https://api.github.com/repos/octo-org/octo-repo/teams",
+                      "hooks_url": "https://api.github.com/repos/octo-org/octo-repo/hooks",
+                      "issue_events_url": "https://api.github.com/repos/octo-org/octo-repo/issues/events{/number}",
+                      "events_url": "https://api.github.com/repos/octo-org/octo-repo/events",
+                      "assignees_url": "https://api.github.com/repos/octo-org/octo-repo/assignees{/user}",
+                      "branches_url": "https://api.github.com/repos/octo-org/octo-repo/branches{/branch}",
+                      "tags_url": "https://api.github.com/repos/octo-org/octo-repo/tags",
+                      "blobs_url": "https://api.github.com/repos/octo-org/octo-repo/git/blobs{/sha}",
+                      "git_tags_url": "https://api.github.com/repos/octo-org/octo-repo/git/tags{/sha}",
+                      "git_refs_url": "https://api.github.com/repos/octo-org/octo-repo/git/refs{/sha}",
+                      "trees_url": "https://api.github.com/repos/octo-org/octo-repo/git/trees{/sha}",
+                      "statuses_url": "https://api.github.com/repos/octo-org/octo-repo/statuses/{sha}",
+                      "languages_url": "https://api.github.com/repos/octo-org/octo-repo/languages",
+                      "stargazers_url": "https://api.github.com/repos/octo-org/octo-repo/stargazers",
+                      "contributors_url": "https://api.github.com/repos/octo-org/octo-repo/contributors",
+                      "subscribers_url": "https://api.github.com/repos/octo-org/octo-repo/subscribers",
+                      "subscription_url": "https://api.github.com/repos/octo-org/octo-repo/subscription",
+                      "commits_url": "https://api.github.com/repos/octo-org/octo-repo/commits{/sha}",
+                      "git_commits_url": "https://api.github.com/repos/octo-org/octo-repo/git/commits{/sha}",
+                      "comments_url": "https://api.github.com/repos/octo-org/octo-repo/comments{/number}",
+                      "issue_comment_url": "https://api.github.com/repos/octo-org/octo-repo/issues/comments{/number}",
+                      "contents_url": "https://api.github.com/repos/octo-org/octo-repo/contents/{+path}",
+                      "compare_url": "https://api.github.com/repos/octo-org/octo-repo/compare/{base}...{head}",
+                      "merges_url": "https://api.github.com/repos/octo-org/octo-repo/merges",
+                      "archive_url": "https://api.github.com/repos/octo-org/octo-repo/{archive_format}{/ref}",
+                      "downloads_url": "https://api.github.com/repos/octo-org/octo-repo/downloads",
+                      "issues_url": "https://api.github.com/repos/octo-org/octo-repo/issues{/number}",
+                      "pulls_url": "https://api.github.com/repos/octo-org/octo-repo/pulls{/number}",
+                      "milestones_url": "https://api.github.com/repos/octo-org/octo-repo/milestones{/number}",
+                      "notifications_url": "https://api.github.com/repos/octo-org/octo-repo/notifications{?since,all,participating}",
+                      "labels_url": "https://api.github.com/repos/octo-org/octo-repo/labels{/name}",
+                      "releases_url": "https://api.github.com/repos/octo-org/octo-repo/releases{/id}",
+                      "deployments_url": "https://api.github.com/repos/octo-org/octo-repo/deployments"
+                    }
+                  }"#)
+                .expect(1)
+                .create();
+
+        let expected_run = &create_expected_run_list()?.workflow_runs[0];
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let run = repo_req.get_a_workflow_run(30433642).await?;
+
+        m.assert();
+        assert_eq!(&run, expected_run);
         Ok(())
     }
 }
