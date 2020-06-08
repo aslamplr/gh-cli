@@ -62,20 +62,9 @@ impl HttpResponse {
     where
         T: serde::de::DeserializeOwned,
     {
-        let status = self.status();
-        if status.is_success() {
-            let body = aggregate(self.inner).await?;
-            let body = serde_json::from_reader(body.reader())?;
-            Ok(body)
-        } else {
-            let body = to_bytes(self.inner).await?;
-            let body = std::str::from_utf8(body.bytes())?;
-            Err(anyhow!("[{}] {}", status, body))
-        }
-    }
-
-    pub fn status(&self) -> hyper::StatusCode {
-        self.inner.status()
+        let body = aggregate(self.inner).await?;
+        let body = serde_json::from_reader(body.reader())?;
+        Ok(body)
     }
 
     pub fn get_header(&self, key: &str) -> Option<String> {
@@ -87,14 +76,9 @@ impl HttpResponse {
     }
 
     pub async fn body(self) -> Result<String> {
-        let status = self.status();
         let body = to_bytes(self.inner).await?;
         let body = std::str::from_utf8(body.bytes())?.into();
-        if status.is_success() {
-            Ok(body)
-        } else {
-            Err(anyhow!("[{}] {}", status, body))
-        }
+        Ok(body)
     }
 }
 
@@ -110,7 +94,14 @@ impl HttpRequest {
 
     pub async fn call(self) -> Result<HttpResponse> {
         let res = self.client.request(self.request).await?;
-        Ok(HttpResponse::from(res))
+        let status = res.status();
+        if status.is_redirection() || status.is_success() {
+            Ok(HttpResponse::from(res))
+        } else {
+            let res = HttpResponse::from(res);
+            let body = res.body().await?;
+            Err(anyhow!("[{}] {}", status, body))
+        }
     }
 }
 
