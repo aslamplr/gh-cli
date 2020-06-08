@@ -10,10 +10,10 @@ const BASE_URL: &str = "https://api.github.com/repos";
 
 #[async_trait]
 pub trait Workflows {
-    async fn get_workflow_runs(&self, workflow_id: i32) -> Result<WorkflowRunList>;
+    async fn get_workflow_runs(&self, workflow_id: u32) -> Result<WorkflowRunList>;
     async fn get_workflow_runs_with_params(
         &self,
-        workflow_id: i32,
+        workflow_id: u32,
         params: WorkflowRunQueryParams<'_>,
     ) -> Result<WorkflowRunList>;
     async fn get_all_workflow_runs(&self) -> Result<WorkflowRunList>;
@@ -21,22 +21,22 @@ pub trait Workflows {
         &self,
         params: WorkflowRunQueryParams<'_>,
     ) -> Result<WorkflowRunList>;
-    async fn get_a_workflow_run(&self, run_id: i32) -> Result<WorkflowRun>;
-    async fn rerun_a_workflow(&self, run_id: i32) -> Result<()>;
-    async fn cancel_a_workflow_run(&self, run_id: i32) -> Result<()>;
-    async fn get_run_logs_url(&self, run_id: i32) -> Result<String>;
-    async fn delete_run_logs(&self, run_id: i32) -> Result<()>;
+    async fn get_a_workflow_run(&self, run_id: u32) -> Result<WorkflowRun>;
+    async fn rerun_a_workflow(&self, run_id: u32) -> Result<()>;
+    async fn cancel_a_workflow_run(&self, run_id: u32) -> Result<()>;
+    async fn get_run_logs_url(&self, run_id: u32) -> Result<String>;
+    async fn delete_run_logs(&self, run_id: u32) -> Result<()>;
 }
 
 #[async_trait]
 impl Workflows for RepoRequest<'_> {
-    async fn get_workflow_runs(&self, workflow_id: i32) -> Result<WorkflowRunList> {
+    async fn get_workflow_runs(&self, workflow_id: u32) -> Result<WorkflowRunList> {
         get_workflow_runs(&self, Some(workflow_id), None).await
     }
 
     async fn get_workflow_runs_with_params(
         &self,
-        workflow_id: i32,
+        workflow_id: u32,
         params: WorkflowRunQueryParams<'_>,
     ) -> Result<WorkflowRunList> {
         get_workflow_runs(&self, Some(workflow_id), Some(&params)).await
@@ -53,23 +53,23 @@ impl Workflows for RepoRequest<'_> {
         get_workflow_runs(&self, None, Some(&params)).await
     }
 
-    async fn get_a_workflow_run(&self, run_id: i32) -> Result<WorkflowRun> {
+    async fn get_a_workflow_run(&self, run_id: u32) -> Result<WorkflowRun> {
         get_a_workflow_run(&self, run_id).await
     }
 
-    async fn rerun_a_workflow(&self, run_id: i32) -> Result<()> {
+    async fn rerun_a_workflow(&self, run_id: u32) -> Result<()> {
         rerun_a_workflow(&self, run_id).await
     }
 
-    async fn cancel_a_workflow_run(&self, run_id: i32) -> Result<()> {
+    async fn cancel_a_workflow_run(&self, run_id: u32) -> Result<()> {
         cancel_a_workflow_run(&self, run_id).await
     }
 
-    async fn get_run_logs_url(&self, run_id: i32) -> Result<String> {
+    async fn get_run_logs_url(&self, run_id: u32) -> Result<String> {
         get_run_logs_url(&self, run_id).await
     }
 
-    async fn delete_run_logs(&self, run_id: i32) -> Result<()> {
+    async fn delete_run_logs(&self, run_id: u32) -> Result<()> {
         delete_run_logs(&self, run_id).await
     }
 }
@@ -83,21 +83,21 @@ pub struct WorkflowRunQueryParams<'a> {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkflowRunList {
-    pub total_count: i32,
+    pub total_count: u32,
     pub workflow_runs: Vec<WorkflowRun>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkflowRun {
-    pub id: i32,
+    pub id: u32,
     pub node_id: String,
     pub head_branch: String,
     pub head_sha: String,
-    pub run_number: i32,
+    pub run_number: u32,
     pub event: String,
     pub status: String,
     pub conclusion: Option<String>,
-    pub workflow_id: i32,
+    pub workflow_id: u32,
     pub url: String,
     pub html_url: String,
     pub pull_requests: Vec<String>,
@@ -134,7 +134,7 @@ pub struct CommitUser {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct User {
     pub login: String,
-    pub id: i32,
+    pub id: u32,
     pub node_id: String,
     pub avatar_url: String,
     pub gravatar_id: String,
@@ -156,7 +156,7 @@ pub struct User {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Repository {
-    pub id: i32,
+    pub id: u32,
     pub node_id: String,
     pub name: String,
     pub full_name: String,
@@ -208,7 +208,7 @@ pub struct Repository {
 
 async fn get_workflow_runs(
     params: &RepoRequest<'_>,
-    workflow_id: Option<i32>,
+    workflow_id: Option<u32>,
     filter: Option<&WorkflowRunQueryParams<'_>>,
 ) -> Result<WorkflowRunList> {
     let RepoRequest(repo, auth_token) = params;
@@ -243,7 +243,7 @@ async fn get_workflow_runs(
     Ok(resp)
 }
 
-async fn get_a_workflow_run(params: &RepoRequest<'_>, run_id: i32) -> Result<WorkflowRun> {
+async fn get_a_workflow_run(params: &RepoRequest<'_>, run_id: u32) -> Result<WorkflowRun> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/runs/{}", repo, run_id);
     let resp = get(&url, &auth_token).await?;
@@ -251,21 +251,21 @@ async fn get_a_workflow_run(params: &RepoRequest<'_>, run_id: i32) -> Result<Wor
     Ok(resp)
 }
 
-async fn rerun_a_workflow(params: &RepoRequest<'_>, run_id: i32) -> Result<()> {
+async fn rerun_a_workflow(params: &RepoRequest<'_>, run_id: u32) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/runs/{}/rerun", repo, run_id);
     post(&url, HttpBody::empty(), &auth_token).await?;
     Ok(())
 }
 
-async fn cancel_a_workflow_run(params: &RepoRequest<'_>, run_id: i32) -> Result<()> {
+async fn cancel_a_workflow_run(params: &RepoRequest<'_>, run_id: u32) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/runs/{}/cancel", repo, run_id);
     post(&url, HttpBody::empty(), &auth_token).await?;
     Ok(())
 }
 
-async fn get_run_logs_url(params: &RepoRequest<'_>, run_id: i32) -> Result<String> {
+async fn get_run_logs_url(params: &RepoRequest<'_>, run_id: u32) -> Result<String> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/runs/{}/logs", repo, run_id);
     let resp = get(&url, &auth_token).await?;
@@ -273,7 +273,7 @@ async fn get_run_logs_url(params: &RepoRequest<'_>, run_id: i32) -> Result<Strin
     resp.ok_or_else(|| anyhow::anyhow!("Location header with log url not found in response!"))
 }
 
-async fn delete_run_logs(params: &RepoRequest<'_>, run_id: i32) -> Result<()> {
+async fn delete_run_logs(params: &RepoRequest<'_>, run_id: u32) -> Result<()> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/runs/{}/logs", repo, run_id);
     delete(&url, &auth_token).await?;

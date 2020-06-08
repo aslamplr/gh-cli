@@ -9,36 +9,36 @@ const BASE_URL: &str = "https://api.github.com/repos";
 
 #[async_trait]
 pub trait Workflows {
-    async fn get_workflow_run_jobs(&self, run_id: i32) -> Result<WorkflowRunJobList>;
-    async fn get_a_workflow_run_job(&self, job_id: i32) -> Result<WorkflowRunJob>;
-    async fn get_job_logs_url(&self, job_id: i32) -> Result<String>;
+    async fn get_workflow_run_jobs(&self, run_id: u32) -> Result<WorkflowRunJobList>;
+    async fn get_a_workflow_run_job(&self, job_id: u32) -> Result<WorkflowRunJob>;
+    async fn get_job_logs_url(&self, job_id: u32) -> Result<String>;
 }
 
 #[async_trait]
 impl Workflows for RepoRequest<'_> {
-    async fn get_workflow_run_jobs(&self, run_id: i32) -> Result<WorkflowRunJobList> {
+    async fn get_workflow_run_jobs(&self, run_id: u32) -> Result<WorkflowRunJobList> {
         get_workflow_run_jobs(&self, run_id).await
     }
 
-    async fn get_a_workflow_run_job(&self, job_id: i32) -> Result<WorkflowRunJob> {
+    async fn get_a_workflow_run_job(&self, job_id: u32) -> Result<WorkflowRunJob> {
         get_a_workflow_run_job(&self, job_id).await
     }
 
-    async fn get_job_logs_url(&self, job_id: i32) -> Result<String> {
+    async fn get_job_logs_url(&self, job_id: u32) -> Result<String> {
         get_job_logs_url(&self, job_id).await
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkflowRunJobList {
-    pub total_count: i32,
+    pub total_count: u32,
     pub jobs: Vec<WorkflowRunJob>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkflowRunJob {
-    pub id: i32,
-    pub run_id: i32,
+    pub id: u32,
+    pub run_id: u32,
     pub run_url: String,
     pub node_id: String,
     pub head_sha: String,
@@ -58,14 +58,14 @@ pub struct WorkflowRunJobStep {
     pub name: String,
     pub status: String,
     pub conclusion: String,
-    pub number: i32,
+    pub number: u32,
     pub started_at: chrono::DateTime<chrono::Utc>,
     pub completed_at: chrono::DateTime<chrono::Utc>,
 }
 
 async fn get_workflow_run_jobs(
     params: &RepoRequest<'_>,
-    run_id: i32,
+    run_id: u32,
 ) -> Result<WorkflowRunJobList> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/runs/{}/jobs", repo, run_id);
@@ -74,7 +74,7 @@ async fn get_workflow_run_jobs(
     Ok(resp)
 }
 
-async fn get_a_workflow_run_job(params: &RepoRequest<'_>, job_id: i32) -> Result<WorkflowRunJob> {
+async fn get_a_workflow_run_job(params: &RepoRequest<'_>, job_id: u32) -> Result<WorkflowRunJob> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/jobs/{}", repo, job_id);
     let resp = get(&url, &auth_token).await?;
@@ -82,7 +82,7 @@ async fn get_a_workflow_run_job(params: &RepoRequest<'_>, job_id: i32) -> Result
     Ok(resp)
 }
 
-async fn get_job_logs_url(params: &RepoRequest<'_>, job_id: i32) -> Result<String> {
+async fn get_job_logs_url(params: &RepoRequest<'_>, job_id: u32) -> Result<String> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/jobs/{}/logs", repo, job_id);
     let resp = get(&url, &auth_token).await?;
