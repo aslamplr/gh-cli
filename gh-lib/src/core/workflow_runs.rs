@@ -1,5 +1,5 @@
 use super::repos::RepoRequest;
-use crate::utils::http::get;
+use crate::utils::http::{delete, get, post, HttpBody};
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,10 @@ pub trait Workflows {
         params: WorkflowRunQueryParams<'_>,
     ) -> Result<WorkflowRunList>;
     async fn get_a_workflow_run(&self, run_id: i32) -> Result<WorkflowRun>;
+    async fn rerun_a_workflow(&self, run_id: i32) -> Result<()>;
+    async fn cancel_a_workflow_run(&self, run_id: i32) -> Result<()>;
+    async fn get_run_logs_url(&self, run_id: i32) -> Result<String>;
+    async fn delete_run_logs(&self, run_id: i32) -> Result<()>;
 }
 
 #[async_trait]
@@ -51,6 +55,22 @@ impl Workflows for RepoRequest<'_> {
 
     async fn get_a_workflow_run(&self, run_id: i32) -> Result<WorkflowRun> {
         get_a_workflow_run(&self, run_id).await
+    }
+
+    async fn rerun_a_workflow(&self, run_id: i32) -> Result<()> {
+        rerun_a_workflow(&self, run_id).await
+    }
+
+    async fn cancel_a_workflow_run(&self, run_id: i32) -> Result<()> {
+        cancel_a_workflow_run(&self, run_id).await
+    }
+
+    async fn get_run_logs_url(&self, run_id: i32) -> Result<String> {
+        get_run_logs_url(&self, run_id).await
+    }
+
+    async fn delete_run_logs(&self, run_id: i32) -> Result<()> {
+        delete_run_logs(&self, run_id).await
     }
 }
 
@@ -229,6 +249,35 @@ async fn get_a_workflow_run(params: &RepoRequest<'_>, run_id: i32) -> Result<Wor
     let resp = get(&url, &auth_token).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
+}
+
+async fn rerun_a_workflow(params: &RepoRequest<'_>, run_id: i32) -> Result<()> {
+    let RepoRequest(repo, auth_token) = params;
+    let url = with_base_url!("{}/actions/runs/{}/rerun", repo, run_id);
+    post(&url, HttpBody::empty(), &auth_token).await?;
+    Ok(())
+}
+
+async fn cancel_a_workflow_run(params: &RepoRequest<'_>, run_id: i32) -> Result<()> {
+    let RepoRequest(repo, auth_token) = params;
+    let url = with_base_url!("{}/actions/runs/{}/cancel", repo, run_id);
+    post(&url, HttpBody::empty(), &auth_token).await?;
+    Ok(())
+}
+
+async fn get_run_logs_url(params: &RepoRequest<'_>, run_id: i32) -> Result<String> {
+    let RepoRequest(repo, auth_token) = params;
+    let url = with_base_url!("{}/actions/runs/{}/logs", repo, run_id);
+    let resp = get(&url, &auth_token).await?;
+    let resp = resp.get_header("Location");
+    resp.ok_or_else(|| anyhow::anyhow!("Location header with log url not found in response!"))
+}
+
+async fn delete_run_logs(params: &RepoRequest<'_>, run_id: i32) -> Result<()> {
+    let RepoRequest(repo, auth_token) = params;
+    let url = with_base_url!("{}/actions/runs/{}/logs", repo, run_id);
+    delete(&url, &auth_token).await?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -919,6 +968,95 @@ mod tests {
 
         m.assert();
         assert_eq!(&run, expected_run);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rerun_a_workflow() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("POST", "/aslamplr/gh-cli/actions/runs/30433642/rerun")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let run = repo_req.rerun_a_workflow(30433642).await;
+
+        m.assert();
+        assert!(&run.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancel_a_workflow_run() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("POST", "/aslamplr/gh-cli/actions/runs/30433642/cancel")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(202)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let run = repo_req.cancel_a_workflow_run(30433642).await;
+
+        m.assert();
+        assert!(&run.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_run_logs_url() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/actions/runs/30433642/logs")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(302)
+            .with_header("Location", "https://pipelines.actions.githubusercontent.com/ab1f3cCFPB34Nd6imvFxpGZH5hNlDp2wijMwl2gDoO0bcrrlJj/_apis/pipelines/1/runs/19/signedlogcontent?urlExpires=2020-01-22T22%3A44%3A54.1389777Z&urlSigningMethod=HMACV1&urlSignature=2TUDfIg4fm36OJmfPy6km5QD5DLCOkBVzvhWZM8B%2BUY%3D")
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let logs_url = repo_req.get_run_logs_url(30433642).await?;
+
+        m.assert();
+        assert_eq!(logs_url, "https://pipelines.actions.githubusercontent.com/ab1f3cCFPB34Nd6imvFxpGZH5hNlDp2wijMwl2gDoO0bcrrlJj/_apis/pipelines/1/runs/19/signedlogcontent?urlExpires=2020-01-22T22%3A44%3A54.1389777Z&urlSigningMethod=HMACV1&urlSignature=2TUDfIg4fm36OJmfPy6km5QD5DLCOkBVzvhWZM8B%2BUY%3D".to_string());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delete_run_logs() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("DELETE", "/aslamplr/gh-cli/actions/runs/30433642/logs")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(204)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let run = repo_req.delete_run_logs(30433642).await;
+
+        m.assert();
+        assert!(&run.is_ok());
         Ok(())
     }
 }
