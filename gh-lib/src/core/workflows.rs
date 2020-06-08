@@ -10,8 +10,8 @@ const BASE_URL: &str = "https://api.github.com/repos";
 #[async_trait]
 pub trait Workflows {
     async fn get_all_workflows(&self) -> Result<WorkflowList>;
-    async fn get_a_workflow(&self, workflow_id: i32) -> Result<Workflow>;
-    async fn get_workflow_usage(&self, workflow_id: i32) -> Result<WorkflowUsage>;
+    async fn get_a_workflow(&self, workflow_id: u32) -> Result<Workflow>;
+    async fn get_workflow_usage(&self, workflow_id: u32) -> Result<WorkflowUsage>;
 }
 
 #[async_trait]
@@ -20,24 +20,24 @@ impl Workflows for RepoRequest<'_> {
         get_all_workflows(&self).await
     }
 
-    async fn get_a_workflow(&self, workflow_id: i32) -> Result<Workflow> {
+    async fn get_a_workflow(&self, workflow_id: u32) -> Result<Workflow> {
         get_a_workflow(&self, workflow_id).await
     }
 
-    async fn get_workflow_usage(&self, workflow_id: i32) -> Result<WorkflowUsage> {
+    async fn get_workflow_usage(&self, workflow_id: u32) -> Result<WorkflowUsage> {
         get_workflow_usage(&self, workflow_id).await
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkflowList {
-    pub total_count: i32,
+    pub total_count: u32,
     pub workflows: Vec<Workflow>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Workflow {
-    pub id: i32,
+    pub id: u32,
     pub node_id: String,
     pub name: String,
     pub path: String,
@@ -76,7 +76,7 @@ platform_usage!(UBUNTU, MACOS, WINDOWS,);
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkflowUsageTiming {
-    pub total_ms: i32,
+    pub total_ms: u32,
 }
 
 async fn get_all_workflows(params: &RepoRequest<'_>) -> Result<WorkflowList> {
@@ -87,7 +87,7 @@ async fn get_all_workflows(params: &RepoRequest<'_>) -> Result<WorkflowList> {
     Ok(resp)
 }
 
-async fn get_a_workflow(params: &RepoRequest<'_>, workflow_id: i32) -> Result<Workflow> {
+async fn get_a_workflow(params: &RepoRequest<'_>, workflow_id: u32) -> Result<Workflow> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/workflows/{}", repo, workflow_id);
     let resp = get(&url, &auth_token).await?;
@@ -95,7 +95,7 @@ async fn get_a_workflow(params: &RepoRequest<'_>, workflow_id: i32) -> Result<Wo
     Ok(resp)
 }
 
-async fn get_workflow_usage(params: &RepoRequest<'_>, workflow_id: i32) -> Result<WorkflowUsage> {
+async fn get_workflow_usage(params: &RepoRequest<'_>, workflow_id: u32) -> Result<WorkflowUsage> {
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/workflows/{}/timing", repo, workflow_id);
     let resp = get(&url, &auth_token).await?;
