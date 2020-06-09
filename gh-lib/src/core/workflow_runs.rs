@@ -9,7 +9,7 @@ use url::form_urlencoded::Serializer;
 const BASE_URL: &str = "https://api.github.com/repos";
 
 #[async_trait]
-pub trait Workflows {
+pub trait WorkflowRuns {
     async fn get_workflow_runs(&self, workflow_id: u32) -> Result<WorkflowRunList>;
     async fn get_workflow_runs_with_params(
         &self,
@@ -30,7 +30,7 @@ pub trait Workflows {
 }
 
 #[async_trait]
-impl Workflows for RepoRequest<'_> {
+impl WorkflowRuns for RepoRequest<'_> {
     async fn get_workflow_runs(&self, workflow_id: u32) -> Result<WorkflowRunList> {
         get_workflow_runs(&self, Some(workflow_id), None).await
     }

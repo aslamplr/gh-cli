@@ -8,14 +8,14 @@ use serde::{Deserialize, Serialize};
 const BASE_URL: &str = "https://api.github.com/repos";
 
 #[async_trait]
-pub trait Workflows {
+pub trait WorkflowJobs {
     async fn get_workflow_run_jobs(&self, run_id: u32) -> Result<WorkflowRunJobList>;
     async fn get_a_workflow_run_job(&self, job_id: u32) -> Result<WorkflowRunJob>;
     async fn get_job_logs_url(&self, job_id: u32) -> Result<String>;
 }
 
 #[async_trait]
-impl Workflows for RepoRequest<'_> {
+impl WorkflowJobs for RepoRequest<'_> {
     async fn get_workflow_run_jobs(&self, run_id: u32) -> Result<WorkflowRunJobList> {
         get_workflow_run_jobs(&self, run_id).await
     }
