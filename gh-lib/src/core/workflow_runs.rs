@@ -26,6 +26,7 @@ pub trait Workflows {
     async fn cancel_a_workflow_run(&self, run_id: u32) -> Result<()>;
     async fn get_run_logs_url(&self, run_id: u32) -> Result<String>;
     async fn delete_run_logs(&self, run_id: u32) -> Result<()>;
+    async fn get_workflow_run_usage(&self, run_id: u32) -> Result<WorkflowRunUsage>;
 }
 
 #[async_trait]
@@ -71,6 +72,10 @@ impl Workflows for RepoRequest<'_> {
 
     async fn delete_run_logs(&self, run_id: u32) -> Result<()> {
         delete_run_logs(&self, run_id).await
+    }
+
+    async fn get_workflow_run_usage(&self, run_id: u32) -> Result<WorkflowRunUsage> {
+        get_workflow_run_usage(&self, run_id).await
     }
 }
 
@@ -206,6 +211,38 @@ pub struct Repository {
     pub hooks_url: Option<String>,
 }
 
+macro_rules! platform_usage {
+    (
+        $(
+            $(#[$docs:meta])*
+            $field:ident,
+        )+
+    ) => {
+        #[allow(non_snake_case)]
+        #[derive(Serialize, Deserialize, Debug, PartialEq)]
+        pub struct WorkflowRunUsagePlatform {
+            $(
+                $(#[$docs])*
+                pub $field: WorkflowRunUsageTiming,
+            )+
+        }
+    };
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct WorkflowRunUsage {
+    pub billable: WorkflowRunUsagePlatform,
+    pub run_duration_ms: u32,
+}
+
+platform_usage!(UBUNTU, MACOS, WINDOWS,);
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct WorkflowRunUsageTiming {
+    pub total_ms: u32,
+    pub jobs: u32,
+}
+
 async fn get_workflow_runs(
     params: &RepoRequest<'_>,
     workflow_id: Option<u32>,
@@ -278,6 +315,14 @@ async fn delete_run_logs(params: &RepoRequest<'_>, run_id: u32) -> Result<()> {
     let url = with_base_url!("{}/actions/runs/{}/logs", repo, run_id);
     delete(&url, &auth_token).await?;
     Ok(())
+}
+
+async fn get_workflow_run_usage(params: &RepoRequest<'_>, run_id: u32) -> Result<WorkflowRunUsage> {
+    let RepoRequest(repo, auth_token) = params;
+    let url = with_base_url!("{}/actions/runs/{}/timing", repo, run_id);
+    let resp = get(&url, &auth_token).await?;
+    let resp = resp.deserialize().await?;
+    Ok(resp)
 }
 
 #[cfg(test)]
@@ -1057,6 +1102,66 @@ mod tests {
 
         m.assert();
         assert!(&run.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_workflow_usage() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/actions/runs/30433642/timing")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "billable": {
+                      "UBUNTU": {
+                        "total_ms": 180000,
+                        "jobs": 1
+                      },
+                      "MACOS": {
+                        "total_ms": 240000,
+                        "jobs": 4
+                      },
+                      "WINDOWS": {
+                        "total_ms": 300000,
+                        "jobs": 2
+                      }
+                    },
+                    "run_duration_ms": 500000
+                  }"#,
+            )
+            .expect(1)
+            .create();
+
+        let expected_usage = WorkflowRunUsage {
+            billable: WorkflowRunUsagePlatform {
+                UBUNTU: WorkflowRunUsageTiming {
+                    total_ms: 180000,
+                    jobs: 1,
+                },
+                MACOS: WorkflowRunUsageTiming {
+                    total_ms: 240000,
+                    jobs: 4,
+                },
+                WINDOWS: WorkflowRunUsageTiming {
+                    total_ms: 300000,
+                    jobs: 2,
+                },
+            },
+            run_duration_ms: 500000,
+        };
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let usage = repo_req.get_workflow_run_usage(30433642).await?;
+
+        m.assert();
+        assert_eq!(usage, expected_usage);
         Ok(())
     }
 }
