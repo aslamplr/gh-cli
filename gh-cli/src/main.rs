@@ -1,3 +1,5 @@
+mod config;
+
 use clap::Clap;
 use crossterm::style::{Colorize, Styler};
 use gh_lib::core::{
@@ -378,8 +380,14 @@ async fn handle_login() -> anyhow::Result<()> {
     };
     if user_input == '\n' {
         let access_token = gh_auth::start_auth_flow().await?;
-        eprintln!("# Run the following to use the access token in subesquent requests!\n");
-        println!("export GH_ACCESS_TOKEN={}", access_token);
+        let config = config::Config::new("_", &access_token);
+        if let Ok(config_path) = config::save_config(config) {
+            eprintln!("# Access token saved to config file: {:?}", config_path);
+        } else {
+            eprintln!("# Unable to establish a config file!");
+            eprintln!("# Run the following to use the access token in subesquent requests!\n");
+            println!("export GH_ACCESS_TOKEN={}", access_token);
+        }
         eprintln!("");
         let oauth_host = gh_auth::OAUTH_HOST;
         let client_id = gh_auth::OAUTH_CLIENT_ID;
@@ -631,6 +639,19 @@ async fn handle_actions_secrets(secrets: &Secrets) -> anyhow::Result<()> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if let Some(config::Config { access_token, .. }) = config::get_config() {
+        const GH_ACCESS_TOKEN: &str = "GH_ACCESS_TOKEN";
+        if let Err(_) = std::env::var(GH_ACCESS_TOKEN) {
+            std::env::set_var(GH_ACCESS_TOKEN, access_token);
+        } else {
+            eprint!(
+                "{} {}\n{}\n",
+                "warning: ".bold().yellow(),
+                "using $GH_ACCESS_TOKEN from env, ignored token in config file!".yellow(),
+                "run `unset GH_ACCESS_TOKEN` if this is not intentional.".dark_yellow()
+            );
+        }
+    }
     let opts: Opts = Opts::parse();
 
     match opts.subcmd {

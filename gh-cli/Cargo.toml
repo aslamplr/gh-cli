@@ -15,5 +15,8 @@ tokio = { version = "0.2", features = ["full"] }
 crossterm = "0.17"
 termimad = "0.8"
 lazy_static = "1.4.0"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.5"
+dirs = "2.0"
 gh-lib = { path = "../gh-lib" }
 gh-auth = { path = "../gh-auth" }
