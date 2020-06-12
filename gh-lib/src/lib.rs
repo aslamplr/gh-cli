@@ -1,6 +1,7 @@
 #[cfg(not(test))]
 pub const BASE_URL: &str = "https://api.github.com";
 
+#[cfg(any(feature = "graphql-api", feature = "http-api"))]
 macro_rules! with_base_url {
   ($($arg:tt)*) => ({
       #[cfg(test)]

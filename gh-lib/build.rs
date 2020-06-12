@@ -1,27 +1,40 @@
+#[cfg(feature = "graphql-api")]
 use curl::easy::Easy;
+#[cfg(feature = "graphql-api")]
 use graphql_client_codegen::{
     generate_module_token_stream, CodegenMode, GraphQLClientCodegenOptions,
 };
+#[cfg(feature = "graphql-api")]
 use std::fs::File;
+#[cfg(feature = "graphql-api")]
 use std::io::{BufWriter, Write as _};
+#[cfg(feature = "graphql-api")]
 use std::path::{Path, PathBuf};
+#[cfg(feature = "graphql-api")]
 use syn::Token;
 
+#[cfg(feature = "graphql-api")]
 const GH_PUBLIC_SCHEMA_URL: &str =
     "https://developer.github.com/v4/public_schema/schema.public.graphql";
+#[cfg(feature = "graphql-api")]
 const SCHEMA_DOWNLOAD_PATH: &str = "graphql/schema.public.graphql";
 
 // Queries
+#[cfg(feature = "graphql-api")]
 const REPO_BASIC_INFO: &str = "graphql/query/repo_basic_info.graphql";
 
 fn main() -> anyhow::Result<()> {
-    println!("cargo:rerun-if-changed={}", REPO_BASIC_INFO);
-    download_schema()?;
-    generate_code(&REPO_BASIC_INFO)?;
-    println!("cargo:rerun-if-changed=build.rs");
+    #[cfg(feature = "graphql-api")]
+    {
+        println!("cargo:rerun-if-changed={}", REPO_BASIC_INFO);
+        download_schema()?;
+        generate_code(&REPO_BASIC_INFO)?;
+        println!("cargo:rerun-if-changed=build.rs");
+    }
     Ok(())
 }
 
+#[cfg(feature = "graphql-api")]
 fn generate_code(query_path: &str) -> anyhow::Result<()> {
     let query_path = PathBuf::from(query_path);
     let mut options = GraphQLClientCodegenOptions::new(CodegenMode::Cli);
@@ -37,8 +50,10 @@ fn generate_code(query_path: &str) -> anyhow::Result<()> {
         .expect("[build.rs] Module token stream generation failed!");
 
     let gen = quote::quote! {
-      #[allow(clippy::redundant_static_lifetimes)]
+      #[cfg(feature = "chrono")]
       type DateTime = chrono::DateTime<chrono::Utc>;
+      #[cfg(not(feature = "chrono"))]
+      type DateTime = String;
       type URI = String;
       #gen
     };
@@ -64,6 +79,7 @@ fn generate_code(query_path: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "graphql-api")]
 fn download_schema() -> anyhow::Result<()> {
     // Check if schema file exists in path
     let schema_file_path = PathBuf::from(SCHEMA_DOWNLOAD_PATH);

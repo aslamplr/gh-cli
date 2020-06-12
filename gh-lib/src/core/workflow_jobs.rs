@@ -1,3 +1,4 @@
+#![cfg(feature = "workflows")]
 use super::repos::RepoRequest;
 use crate::utils::http::get;
 use anyhow::Result;
@@ -46,8 +47,14 @@ pub struct WorkflowRunJob {
     pub html_url: String,
     pub status: String,
     pub conclusion: String,
+    #[cfg(feature = "chrono")]
     pub started_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub started_at: String,
+    #[cfg(feature = "chrono")]
     pub completed_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub completed_at: String,
     pub name: String,
     pub steps: Vec<WorkflowRunJobStep>,
     pub check_run_url: String,
@@ -59,8 +66,14 @@ pub struct WorkflowRunJobStep {
     pub status: String,
     pub conclusion: String,
     pub number: u32,
+    #[cfg(feature = "chrono")]
     pub started_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub started_at: String,
+    #[cfg(feature = "chrono")]
     pub completed_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub completed_at: String,
 }
 
 async fn get_workflow_run_jobs(
