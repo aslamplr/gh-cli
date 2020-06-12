@@ -654,7 +654,7 @@ async fn main() -> anyhow::Result<()> {
     {
         if let Some(config::Config { access_token, .. }) = config::get_config() {
             const GH_ACCESS_TOKEN: &str = "GH_ACCESS_TOKEN";
-            if let Err(_) = std::env::var(GH_ACCESS_TOKEN) {
+            if std::env::var(GH_ACCESS_TOKEN).is_err() {
                 std::env::set_var(GH_ACCESS_TOKEN, access_token);
             } else {
                 eprint!(
