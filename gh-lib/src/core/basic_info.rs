@@ -1,3 +1,4 @@
+#![cfg(feature = "basic-info")]
 use super::repos::{Repo, RepoRequest};
 pub use crate::graphql::repo_basic_info::repo_basic_info_query as basic_info_response;
 use crate::utils::http::{request, HttpMethod};

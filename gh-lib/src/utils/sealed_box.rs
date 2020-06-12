@@ -1,3 +1,4 @@
+#![cfg(feature = "secrets-save")]
 use anyhow::{anyhow, Result};
 use sodiumoxide::crypto::{box_::curve25519xsalsa20poly1305::PublicKey, sealedbox};
 

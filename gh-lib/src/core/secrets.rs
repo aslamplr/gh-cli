@@ -1,8 +1,10 @@
+#![cfg(feature = "secrets")]
 use super::repos::RepoRequest;
-use crate::utils::{
-    http::{delete, get, put, HttpBody},
-    sealed_box::seal,
-};
+use crate::utils::http::{delete, get};
+#[cfg(feature = "secrets-save")]
+use crate::utils::http::{put, HttpBody};
+#[cfg(feature = "secrets-save")]
+use crate::utils::sealed_box::seal;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -15,6 +17,7 @@ pub trait Secrets {
     async fn get_public_key(&self) -> Result<PublicKeyResponse>;
     async fn get_all_secrets(&self) -> Result<SecretListResponse>;
     async fn get_a_secret(&self, name: &str) -> Result<Secret>;
+    #[cfg(feature = "secrets-save")]
     async fn save_secret(&self, name: &str, value: &str) -> Result<()>;
     async fn delete_a_secret(&self, name: &str) -> Result<()>;
 }
@@ -33,6 +36,7 @@ impl Secrets for RepoRequest<'_> {
         get_a_secret(&self, &name).await
     }
 
+    #[cfg(feature = "secrets-save")]
     async fn save_secret(&self, name: &str, value: &str) -> Result<()> {
         let public_key = self.get_public_key().await?;
         let secret_save_req = SecretSaveRequest::from(name, value, public_key)?;
@@ -47,8 +51,14 @@ impl Secrets for RepoRequest<'_> {
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Secret {
     pub name: String,
+    #[cfg(feature = "chrono")]
     pub created_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub created_at: String,
+    #[cfg(feature = "chrono")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub updated_at: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -63,6 +73,7 @@ pub struct PublicKeyResponse {
     key: String,
 }
 
+#[cfg(feature = "secrets-save")]
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 struct SecretSaveRequest {
     #[serde(skip_serializing)]
@@ -73,6 +84,7 @@ struct SecretSaveRequest {
     public_key: PublicKeyResponse,
 }
 
+#[cfg(feature = "secrets-save")]
 impl SecretSaveRequest {
     fn from(key: &str, value: &str, public_key: PublicKeyResponse) -> Result<Self> {
         let encrypted_value = seal(value, &public_key.key)?;
@@ -114,6 +126,7 @@ async fn get_a_secret(params: &RepoRequest<'_>, name: &str) -> Result<Secret> {
     get_from_gh(&format!("actions/secrets/{}", name), &params).await
 }
 
+#[cfg(feature = "secrets-save")]
 async fn put_gh_secret(
     params: &RepoRequest<'_>,
     name: &str,
@@ -268,6 +281,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "secrets-save")]
     #[tokio::test]
     async fn save_secret() -> Result<()> {
         let public_key_base64 = {

@@ -1,3 +1,4 @@
+#![cfg(any(feature = "graphql-api", feature = "http-api"))]
 use anyhow::{anyhow, Result};
 use bytes::buf::{Buf, BufExt};
 pub use hyper::Method as HttpMethod;

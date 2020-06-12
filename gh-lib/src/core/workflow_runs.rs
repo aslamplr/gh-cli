@@ -1,3 +1,4 @@
+#![cfg(feature = "workflows")]
 use super::repos::RepoRequest;
 use crate::utils::http::{delete, get, post, HttpBody};
 use anyhow::Result;
@@ -106,8 +107,14 @@ pub struct WorkflowRun {
     pub url: String,
     pub html_url: String,
     pub pull_requests: Vec<String>,
+    #[cfg(feature = "chrono")]
     pub created_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub created_at: String,
+    #[cfg(feature = "chrono")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub updated_at: String,
     pub jobs_url: String,
     pub logs_url: String,
     pub check_suite_url: String,

@@ -1,6 +1,11 @@
+#[cfg(feature = "basic-info")]
 pub mod basic_info;
 pub mod repos;
+#[cfg(feature = "secrets")]
 pub mod secrets;
+#[cfg(feature = "workflows")]
 pub mod workflow_jobs;
+#[cfg(feature = "workflows")]
 pub mod workflow_runs;
+#[cfg(feature = "workflows")]
 pub mod workflows;

@@ -1,3 +1,4 @@
+#![cfg(feature = "workflows")]
 use super::repos::RepoRequest;
 use crate::utils::http::get;
 use anyhow::Result;
@@ -42,8 +43,14 @@ pub struct Workflow {
     pub name: String,
     pub path: String,
     pub state: String,
+    #[cfg(feature = "chrono")]
     pub created_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub created_at: String,
+    #[cfg(feature = "chrono")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    #[cfg(not(feature = "chrono"))]
+    pub updated_at: String,
     pub url: String,
     pub html_url: String,
     pub badge_url: String,

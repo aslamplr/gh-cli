@@ -1,3 +1,4 @@
+#![cfg(feature = "graphql-api")]
 use super::http::{post, HttpBody};
 use anyhow::Result;
 use graphql_client::{QueryBody, Response};
