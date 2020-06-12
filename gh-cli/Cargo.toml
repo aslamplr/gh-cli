@@ -7,6 +7,15 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/aslamplr/gh-cli"
 
+[features]
+# Login using GitHub OAuth features
+login = [ "gh-auth" ]
+# Use config file
+config = [ "login", "serde", "toml", "dirs" ]
+# All features
+all = [ "login", "config" ]
+default = [ "all" ]
+
 [dependencies]
 clap = "3.0.0-beta.1"
 regex = "1"
@@ -15,8 +24,11 @@ tokio = { version = "0.2", features = ["full"] }
 crossterm = "0.17"
 termimad = "0.8"
 lazy_static = "1.4.0"
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.5"
-dirs = "2.0"
 gh-lib = { path = "../gh-lib" }
-gh-auth = { path = "../gh-auth" }
+# login
+gh-auth = { path = "../gh-auth", optional = true }
+
+# config
+serde = { version = "1.0", features = ["derive"], optional = true }
+toml = { version = "0.5", optional = true }
+dirs = { version = "2.0", optional = true }
