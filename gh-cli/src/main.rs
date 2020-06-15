@@ -1,12 +1,13 @@
 use clap::Clap;
 use crossterm::style::{Colorize, Styler};
+#[cfg(feature = "basic-info")]
+use gh_lib::core::basic_info::{basic_info_response, BasicInfo as _};
+use gh_lib::core::repos::RepoRequest;
+#[cfg(feature = "secrets")]
+use gh_lib::core::secrets::{Secret, SecretListResponse, Secrets as _};
+#[cfg(feature = "workflows")]
 use gh_lib::core::{
-    basic_info::{basic_info_response, BasicInfo as _},
-    repos::RepoRequest,
-    secrets::{Secret, SecretListResponse, Secrets as _},
-    workflow_jobs::WorkflowJobs as _,
-    workflow_runs::WorkflowRuns as _,
-    workflows::Workflows as _,
+    workflow_jobs::WorkflowJobs as _, workflow_runs::WorkflowRuns as _, workflows::Workflows as _,
 };
 
 #[cfg(feature = "config")]
@@ -86,14 +87,18 @@ enum SubCommand {
     #[cfg(feature = "login")]
     #[clap(about = "Login using GitHub OAuth (requires web browser)")]
     Login,
+    #[cfg(feature = "basic-info")]
     #[clap(about = "Repository operations")]
     Repo(Repo),
+    #[cfg(feature = "secrets")]
     #[clap(about = "Actions secrets")]
     Secrets(Secrets),
+    #[cfg(any(feature = "secrets", feature = "workflows"))]
     #[clap(about = "GitHub Actions operations")]
     Actions(Actions),
 }
 
+#[cfg(feature = "basic-info")]
 #[derive(Clap)]
 #[clap(
     name = "GitHub Repo CLI",
@@ -130,6 +135,7 @@ struct Repo {
     readme: bool,
 }
 
+#[cfg(any(feature = "secrets", feature = "workflows"))]
 #[derive(Clap)]
 #[clap(
     name = "GitHub Actions CLI",
@@ -142,18 +148,24 @@ struct Actions {
     subcmd: ActionsSubCommand,
 }
 
+#[cfg(any(feature = "secrets", feature = "workflows"))]
 #[derive(Clap)]
 enum ActionsSubCommand {
+    #[cfg(feature = "workflows")]
     #[clap(about = "Actions Workflows")]
     Workflows(Workflows),
+    #[cfg(feature = "workflows")]
     #[clap(about = "Actions Workflow Runs")]
     Runs(WorkflowRuns),
+    #[cfg(feature = "workflows")]
     #[clap(about = "Actions Workflow Jobs")]
     Jobs(WorkflowJobs),
+    #[cfg(feature = "secrets")]
     #[clap(about = "Actions Secrets")]
     Secrets(Secrets),
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 struct Workflows {
     #[clap(
@@ -184,6 +196,7 @@ struct Workflows {
     subcmd: WorkflowsSubCommand,
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 enum WorkflowsSubCommand {
     List,
@@ -191,11 +204,13 @@ enum WorkflowsSubCommand {
     Usage(WorkflowId),
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 struct WorkflowId {
     workflow_id: u32,
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 struct WorkflowRuns {
     #[clap(
@@ -226,6 +241,7 @@ struct WorkflowRuns {
     subcmd: WorkflowRunsSubCommand,
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 enum WorkflowRunsSubCommand {
     #[clap(about = "List All Repo Workflow Runs")]
@@ -246,11 +262,13 @@ enum WorkflowRunsSubCommand {
     Usage(WorkflowRunId),
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 struct WorkflowRunId {
     run_id: u32,
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 struct WorkflowJobs {
     #[clap(
@@ -281,6 +299,7 @@ struct WorkflowJobs {
     subcmd: WorkflowJobsSubCommand,
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 enum WorkflowJobsSubCommand {
     #[clap(about = "List jobs for a Workflow Run for <run_id>")]
@@ -291,11 +310,13 @@ enum WorkflowJobsSubCommand {
     DownloadLogs(WorkflowJobId),
 }
 
+#[cfg(feature = "workflows")]
 #[derive(Clap)]
 struct WorkflowJobId {
     job_id: u32,
 }
 
+#[cfg(feature = "secrets")]
 #[derive(Clap)]
 struct Secrets {
     #[clap(
@@ -326,27 +347,33 @@ struct Secrets {
     subcmd: SecretsSubCommand,
 }
 
+#[cfg(feature = "secrets")]
 #[derive(Clap)]
 enum SecretsSubCommand {
     #[clap(about = "List all secrets")]
     List,
     #[clap(about = "Print a secret")]
     Get(SecretsName),
+    #[cfg(feature = "secrets-save")]
     #[clap(about = "Add a new secret")]
     Add(SecretsNameValue),
+    #[cfg(feature = "secrets-save")]
     #[clap(about = "Update a secret")]
     Update(SecretsNameValue),
+    #[cfg(feature = "secrets-save")]
     #[clap(about = "Update a secret (an alias for update)")]
     Edit(SecretsNameValue),
     #[clap(about = "Delete a secret")]
     Delete(SecretsName),
 }
 
+#[cfg(feature = "secrets")]
 impl std::fmt::Display for SecretsSubCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let act = match self {
             SecretsSubCommand::List => "list",
             SecretsSubCommand::Get(_) => "get",
+            #[cfg(feature = "secrets-save")]
             SecretsSubCommand::Add(_)
             | SecretsSubCommand::Update(_)
             | SecretsSubCommand::Edit(_) => "save",
@@ -357,12 +384,14 @@ impl std::fmt::Display for SecretsSubCommand {
     }
 }
 
+#[cfg(feature = "secrets")]
 #[derive(Clap)]
 struct SecretsName {
     #[clap(name = "SECRET_NAME", index = 1)]
     name: String,
 }
 
+#[cfg(feature = "secrets-save")]
 #[derive(Clap)]
 struct SecretsNameValue {
     #[clap(name = "SECRET_NAME", index = 1)]
@@ -412,6 +441,7 @@ async fn handle_login() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "basic-info")]
 async fn handle_repo(repo: &Repo) -> anyhow::Result<()> {
     let Repo {
         name,
@@ -486,6 +516,7 @@ async fn handle_repo(repo: &Repo) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "workflows")]
 async fn handle_actions_workflows(workflows: &Workflows) -> anyhow::Result<()> {
     let Workflows {
         name,
@@ -513,6 +544,7 @@ async fn handle_actions_workflows(workflows: &Workflows) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "workflows")]
 async fn handle_actions_workflow_runs(workflow_runs: &WorkflowRuns) -> anyhow::Result<()> {
     let WorkflowRuns {
         name,
@@ -560,6 +592,7 @@ async fn handle_actions_workflow_runs(workflow_runs: &WorkflowRuns) -> anyhow::R
     Ok(())
 }
 
+#[cfg(feature = "workflows")]
 async fn handle_actions_workflow_jobs(workflow_jobs: &WorkflowJobs) -> anyhow::Result<()> {
     let WorkflowJobs {
         name,
@@ -587,6 +620,7 @@ async fn handle_actions_workflow_jobs(workflow_jobs: &WorkflowJobs) -> anyhow::R
     Ok(())
 }
 
+#[cfg(feature = "secrets")]
 async fn handle_actions_secrets(secrets: &Secrets) -> anyhow::Result<()> {
     let Secrets {
         name,
@@ -629,6 +663,7 @@ async fn handle_actions_secrets(secrets: &Secrets) -> anyhow::Result<()> {
             printmd!("**Created At**:\t{}", created_at);
             printmd!("**Updated At**:\t{}", updated_at);
         }
+        #[cfg(feature = "secrets-save")]
         SecretsSubCommand::Add(name_value)
         | SecretsSubCommand::Update(name_value)
         | SecretsSubCommand::Edit(name_value) => {
@@ -671,7 +706,9 @@ async fn main() -> anyhow::Result<()> {
     match opts.subcmd {
         #[cfg(feature = "login")]
         SubCommand::Login => handle_login().await?,
+        #[cfg(feature = "basic-info")]
         SubCommand::Repo(repo) => handle_repo(&repo).await?,
+        #[cfg(feature = "secrets")]
         SubCommand::Secrets(secrets) => {
             eprint!(
                 "{}{}{}{}{}",
@@ -683,14 +720,19 @@ async fn main() -> anyhow::Result<()> {
             );
             handle_actions_secrets(&secrets).await?
         }
+        #[cfg(any(feature = "secrets", feature = "workflows"))]
         SubCommand::Actions(actions) => match actions.subcmd {
+            #[cfg(feature = "workflows")]
             ActionsSubCommand::Workflows(workflows) => handle_actions_workflows(&workflows).await?,
+            #[cfg(feature = "workflows")]
             ActionsSubCommand::Runs(workflow_runs) => {
                 handle_actions_workflow_runs(&workflow_runs).await?
             }
+            #[cfg(feature = "workflows")]
             ActionsSubCommand::Jobs(workflow_jobs) => {
                 handle_actions_workflow_jobs(&workflow_jobs).await?
             }
+            #[cfg(feature = "secrets")]
             ActionsSubCommand::Secrets(secrets) => handle_actions_secrets(&secrets).await?,
         },
     }

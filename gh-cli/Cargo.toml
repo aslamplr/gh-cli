@@ -12,8 +12,15 @@ repository = "https://github.com/aslamplr/gh-cli"
 login = [ "gh-auth" ]
 # Use config file
 config = [ "login", "serde", "toml", "dirs" ]
+# gh-lib features
+chrono = ["gh-lib/chrono"]
+workflows = ["gh-lib/workflows"]
+secrets = ["gh-lib/secrets"]
+secrets-save = ["gh-lib/secrets-save", "secrets"]
+basic-info = ["gh-lib/basic-info"]
+gh-lib-all = [ "workflows", "secrets", "secrets-save", "basic-info", "chrono" ]
 # All features
-all = [ "login", "config" ]
+all = [ "login", "config", "gh-lib-all" ]
 default = [ "all" ]
 
 [dependencies]
@@ -24,7 +31,7 @@ tokio = { version = "0.2", features = ["full"] }
 crossterm = "0.17"
 termimad = "0.8"
 lazy_static = "1.4.0"
-gh-lib = { path = "../gh-lib" }
+gh-lib = { path = "../gh-lib", default-features = false }
 # login
 gh-auth = { path = "../gh-auth", optional = true }
 
