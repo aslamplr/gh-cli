@@ -1,0 +1,9 @@
+[build.env]
+passthrough = [
+  "GH_OAUTH_CLIENT_ID",
+  "GH_OAUTH_CLIENT_SECRET"
+]
+
+[target.armv7-unknown-linux-gnueabihf]
+image = "my/cross:armv7-unknown-linux-gnueabihf"
+
