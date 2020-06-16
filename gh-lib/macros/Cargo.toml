@@ -7,13 +7,14 @@ edition = "2018"
 [lib]
 proc-macro = true
 
-[features]
-default = [ "curl" ]
-
 [dependencies]
 syn = "1.0"
 quote = "1.0"
 proc-macro2 = "1.0"
 anyhow = "1.0"
 graphql_client_codegen = "0.9.0"
-curl = { version = "0.4.29", optional = true }
+
+[dependencies.curl]
+version = "0.4.29"
+default-features = false
+features = [ "static-ssl" ]

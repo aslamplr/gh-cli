@@ -1,13 +1,10 @@
-#[cfg(feature = "curl")]
 use curl::easy::Easy;
 use graphql_client_codegen::{
     generate_module_token_stream, CodegenMode, GraphQLClientCodegenOptions,
 };
 use proc_macro::TokenStream;
 use quote::quote;
-#[cfg(feature = "curl")]
 use std::fs::File;
-#[cfg(feature = "curl")]
 use std::io::{BufWriter, Write as _};
 use std::path::{Path, PathBuf};
 use syn::parse::{self, Parse, ParseStream};
@@ -91,7 +88,6 @@ fn generate_query_module(query_path: &PathBuf) -> proc_macro2::TokenStream {
     }
 }
 
-#[cfg(feature = "curl")]
 fn download_schema(schema_url: &str) -> anyhow::Result<()> {
     // Check if schema file exists in path
     let schema_file_path = PathBuf::from(SCHEMA_DOWNLOAD_PATH);
