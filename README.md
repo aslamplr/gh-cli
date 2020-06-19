@@ -65,3 +65,11 @@ cargo build --release
 ## Roadmap
 - Blazing fast Unofficial Github CLI implemented in Rust 
 - Rust client library for Github API
+
+## Benchmark comparison using hyperfine on MacBook Air
+
+command: `hyperfine --warmup 3 'gh-cli repo --readme' 'gh repo view'`
+
+![benchmark-against-official-cli](docs/benchmark_against_official_cli.png)
+
+_Note: Both `gh-cli` and `gh` pre logged in to make sure both have proper access tokens prior to run benchmarks._
