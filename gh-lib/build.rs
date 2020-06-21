@@ -19,24 +19,34 @@ const GH_PUBLIC_SCHEMA_URL: &str =
 #[cfg(feature = "graphql-api")]
 const SCHEMA_DOWNLOAD_PATH: &str = "graphql/schema.public.graphql";
 
-// Queries
 #[cfg(feature = "graphql-api")]
-const REPO_BASIC_INFO: &str = "graphql/query/repo_basic_info.graphql";
+const GRAPHQL_QUERY_ROOT: &str = "graphql/query/";
 
 fn main() -> anyhow::Result<()> {
     #[cfg(feature = "graphql-api")]
     {
-        println!("cargo:rerun-if-changed={}", REPO_BASIC_INFO);
         download_schema()?;
-        generate_code(&REPO_BASIC_INFO)?;
+        let graphql_queries = Path::new(GRAPHQL_QUERY_ROOT)
+            .read_dir()?
+            .filter(|p| p.is_ok())
+            .map(|p| p.as_ref().unwrap().path())
+            .filter(|p| p.extension().unwrap_or_default() == "graphql");
+        for query_path in graphql_queries {
+            generate_code(&query_path)?;
+            println!(
+                "cargo:rerun-if-changed={}",
+                query_path
+                    .to_str()
+                    .expect("graphql filename should be valid utf-8 string")
+            );
+        }
         println!("cargo:rerun-if-changed=build.rs");
     }
     Ok(())
 }
 
 #[cfg(feature = "graphql-api")]
-fn generate_code(query_path: &str) -> anyhow::Result<()> {
-    let query_path = PathBuf::from(query_path);
+fn generate_code(query_path: &PathBuf) -> anyhow::Result<()> {
     let mut options = GraphQLClientCodegenOptions::new(CodegenMode::Cli);
     options.set_module_visibility(
         syn::VisPublic {
