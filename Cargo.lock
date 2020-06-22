@@ -683,6 +683,7 @@ dependencies = [
  "graphql_client_codegen",
  "hyper",
  "hyper-tls",
+ "macros",
  "mockito",
  "quote",
  "serde",
@@ -983,6 +984,18 @@ dependencies = [
  "cfg-if",
  "generator",
  "scoped-tls",
+]
+
+[[package]]
+name = "macros"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "curl",
+ "graphql_client_codegen",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

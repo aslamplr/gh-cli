@@ -9,7 +9,7 @@ repository = "https://github.com/aslamplr/gh-cli"
 
 [features]
 http-api = [ "hyper", "hyper-tls", "bytes" ]
-graphql-api = [ "graphql_client", "http-api" ]
+graphql-api = [ "graphql_client", "http-api", "macros" ]
 workflows = [ "http-api" ]
 secrets = [ "http-api" ]
 secrets-save = [ "sodiumoxide", "secrets" ]
@@ -31,17 +31,11 @@ hyper-tls = { version = "0.4.1", optional = true }
 bytes = { version = "0.5", optional = true }
 # graphql-api
 graphql_client = { version = "0.9.0", optional = true }
+macros = { path = "macros", optional = true }
 # chrono
 chrono = { version = "0.4", features = ["serde"], optional = true }
 # secrets-save
 sodiumoxide = { version = "0.2.5", optional = true }
-
-[build-dependencies]
-anyhow = "1.0"
-curl = "0.4.29"
-graphql_client_codegen = "0.9.0"
-syn = "1.0"
-quote = "1.0"
 
 [dev-dependencies]
 tokio = { version = "0.2", features = ["full"] }
