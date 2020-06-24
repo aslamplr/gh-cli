@@ -139,7 +139,7 @@ impl OAuthFlow<'_> {
                     .authority(self.host_name)
                     .path_and_query("/login/oauth/access_token")
                     .build()?;
-                let client = Client::builder().build::<_, Body>(hyper_tls::HttpsConnector::new());
+                let client = Client::builder().build::<_, Body>(hyper_rustls::HttpsConnector::new());
                 let form_encoded = Serializer::new(String::new())
                     .append_pair("client_id", self.client_id)
                     .append_pair("client_secret", self.client_secret)
