@@ -678,6 +678,7 @@ dependencies = [
  "base64 0.12.2",
  "bytes",
  "chrono",
+ "curl",
  "graphql_client",
  "hyper",
  "hyper-tls",
@@ -986,8 +987,6 @@ dependencies = [
 name = "macros"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "curl",
  "graphql_client_codegen",
  "proc-macro2",
  "quote",

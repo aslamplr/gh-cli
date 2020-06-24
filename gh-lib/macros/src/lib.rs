@@ -1,46 +1,18 @@
-#[cfg(feature = "curl")]
-use curl::easy::Easy;
 use graphql_client_codegen::{
     generate_module_token_stream, CodegenMode, GraphQLClientCodegenOptions,
 };
 use proc_macro::TokenStream;
 use quote::quote;
-#[cfg(feature = "curl")]
-use std::fs::File;
-#[cfg(feature = "curl")]
-use std::io::{BufWriter, Write as _};
 use std::path::{Path, PathBuf};
-use syn::parse::{self, Parse, ParseStream};
-use syn::{parse_macro_input, LitStr, Token};
+use syn::Token;
 
-const SCHEMA_DOWNLOAD_PATH: &str = "gh-lib/graphql/schema.public.graphql";
-
-#[derive(Debug)]
-struct MacroArgs {
-    query_dir: String,
-    schema_url: String,
-}
-
-impl Parse for MacroArgs {
-    fn parse(input: ParseStream) -> parse::Result<Self> {
-        let query_dir = input.parse::<LitStr>()?.value();
-        input.parse::<Token![,]>()?;
-        let schema_url = input.parse::<LitStr>()?.value();
-        Ok(Self {
-            query_dir,
-            schema_url,
-        })
-    }
-}
+const SCHEMA_DOWNLOAD_PATH: &str = "graphql/schema.public.graphql";
+const QRAPHQL_QUERY_PATH: &str = "graphql/query";
 
 #[proc_macro]
-pub fn include_graphql_queries(input: TokenStream) -> TokenStream {
-    let MacroArgs {
-        query_dir,
-        schema_url,
-    } = parse_macro_input!(input as MacroArgs);
-    download_schema(&schema_url).expect("Failed to download GraphQL schema!");
-    let generated_modules = Path::new(&query_dir)
+pub fn include_graphql_queries(_input: TokenStream) -> TokenStream {
+    let query_dir = get_query_dir();
+    let generated_modules = query_dir
         .read_dir()
         .unwrap()
         .filter(|p| p.is_ok())
@@ -77,7 +49,7 @@ fn generate_query_module(query_path: &PathBuf) -> proc_macro2::TokenStream {
         .into(),
     );
     options.set_response_derives(String::from("Serialize,PartialEq,Debug"));
-    let schema_path = PathBuf::from(SCHEMA_DOWNLOAD_PATH);
+    let schema_path = get_schema_download_path();
     let gen = generate_module_token_stream(query_path.clone(), &schema_path, options)
         .expect("[generate_query] Module token stream generation failed!");
 
@@ -91,34 +63,12 @@ fn generate_query_module(query_path: &PathBuf) -> proc_macro2::TokenStream {
     }
 }
 
-#[cfg(feature = "curl")]
-fn download_schema(schema_url: &str) -> anyhow::Result<()> {
-    // Check if schema file exists in path
-    let schema_file_path = PathBuf::from(SCHEMA_DOWNLOAD_PATH);
-    if !schema_file_path.exists() {
-        // Download the file to the path!
-        let f = File::create(&schema_file_path)?;
-        let mut writer = BufWriter::new(f);
-        let mut easy = Easy::new();
-        easy.url(schema_url)?;
-        easy.write_function(move |data| {
-            Ok(writer
-                .write(data)
-                .expect("[download_schema][curl] unable to write"))
-        })?;
-        easy.perform()?;
-        let response_code = easy.response_code()?;
-        if response_code != 200 {
-            panic!(
-                "[download_schema][curl] Unexpected response code {} for {}",
-                response_code, schema_url
-            );
-        }
-    } else {
-        println!(
-            "[download_schema][curl] Found {}, Not downloading from internet!",
-            SCHEMA_DOWNLOAD_PATH
-        );
-    }
-    Ok(())
+fn get_schema_download_path() -> PathBuf {
+    let out_dir = std::env::var_os("OUT_DIR").unwrap();
+    Path::new(&out_dir).join(SCHEMA_DOWNLOAD_PATH)
+}
+
+fn get_query_dir() -> PathBuf {
+    let out_dir = std::env::var_os("OUT_DIR").unwrap();
+    Path::new(&out_dir).join(QRAPHQL_QUERY_PATH)
 }
