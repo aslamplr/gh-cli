@@ -68,7 +68,7 @@ macro_rules! platform_usage {
         pub struct WorkflowUsagePlatform {
             $(
                 $(#[$docs])*
-                pub $field: WorkflowUsageTiming,
+                pub $field: Option<WorkflowUsageTiming>,
             )+
         }
     };
@@ -106,6 +106,8 @@ async fn get_workflow_usage(params: &RepoRequest<'_>, workflow_id: u32) -> Resul
     let RepoRequest(repo, auth_token) = params;
     let url = with_base_url!("{}/actions/workflows/{}/timing", repo, workflow_id);
     let resp = get(&url, &auth_token).await?;
+    // eprintln!("body: {:?}", resp.body().await);
+    // Err(anyhow::anyhow!("Error!"))
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
@@ -282,9 +284,9 @@ mod tests {
 
         let expected_usage = WorkflowUsage {
             billable: WorkflowUsagePlatform {
-                UBUNTU: WorkflowUsageTiming { total_ms: 180000 },
-                MACOS: WorkflowUsageTiming { total_ms: 240000 },
-                WINDOWS: WorkflowUsageTiming { total_ms: 300000 },
+                UBUNTU: Some(WorkflowUsageTiming { total_ms: 180000 }),
+                MACOS: Some(WorkflowUsageTiming { total_ms: 240000 }),
+                WINDOWS: Some(WorkflowUsageTiming { total_ms: 300000 }),
             },
         };
 
