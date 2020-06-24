@@ -44,6 +44,19 @@ jobs:
     - name: Unit tests
       run: cargo test
 
+  cargo_bloat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Run cargo bloat
+        uses: orf/cargo-bloat-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   build-ubuntu:
     runs-on: ubuntu-latest
     steps:
