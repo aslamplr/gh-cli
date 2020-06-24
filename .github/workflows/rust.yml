@@ -7,6 +7,43 @@ on:
     branches: [ master ]
 
 jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Log versions
+      run: |
+        rustc --version
+        cargo --version
+
+    - name: Configure cargo data directory
+      # Copied from denoland/deno
+      # After this point, all cargo registry and crate data is stored in
+      # $GITHUB_WORKSPACE/.cargo_home. This allows us to cache only the files
+      # that are needed during the build process. Additionally, this works
+      # around a bug in the 'cache' action that causes directories outside of
+      # the workspace dir to be saved/restored incorrectly.
+      run: echo "::set-env name=CARGO_HOME::$(pwd)/.cargo_home"
+
+    - name: Cache
+      # Copied from denoland/deno
+      # https://github.com/denoland/deno/blob/0ffc99a61ddfa958a436beef0d003ecead630d0f/.github/workflows/ci.yml#L106
+      uses: actions/cache@v2
+      with:
+        path: |-
+          .cargo_home
+          target/*/.*
+          target/*/build
+          target/*/deps
+        key:
+          ${{ runner.os }}-tests-${{ hashFiles('Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-tests-
+
+    - name: Unit tests
+      run: cargo test
+
   build-ubuntu:
     runs-on: ubuntu-latest
     steps:
