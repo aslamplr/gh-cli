@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/aslamplr/gh-cli"
 
 [features]
-http-api = [ "hyper", "hyper-tls", "bytes" ]
+http-api = [ "hyper", "hyper-rustls", "bytes" ]
 graphql-api = [ "graphql_client", "http-api", "macros" ]
 workflows = [ "http-api" ]
 secrets = [ "http-api" ]
@@ -27,7 +27,7 @@ url = "2.1"
 
 # http-api
 hyper = { version = "0.13", optional = true }
-hyper-tls = { version = "0.4.1", optional = true }
+hyper-rustls = { version = "0.20.0", default-features = false, features = [ "webpki-tokio" ], optional = true }
 bytes = { version = "0.5", optional = true }
 # graphql-api
 graphql_client = { version = "0.9.0", optional = true }

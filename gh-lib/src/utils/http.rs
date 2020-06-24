@@ -7,7 +7,7 @@ use hyper::{
     http::{request::Builder, response::Response},
     Body, Client, Request, Uri,
 };
-use hyper_tls::HttpsConnector;
+use hyper_rustls::HttpsConnector;
 
 type HttpsClient =
     hyper::client::Client<HttpsConnector<hyper::client::connect::HttpConnector>, hyper::Body>;
