@@ -7,7 +7,9 @@ use gh_lib::core::repos::RepoRequest;
 use gh_lib::core::secrets::{Secret, SecretListResponse, Secrets as _};
 #[cfg(feature = "workflows")]
 use gh_lib::core::{
-    workflow_jobs::WorkflowJobs as _, workflow_runs::WorkflowRuns as _, workflows::Workflows as _,
+    workflow_jobs::WorkflowJobs as _,
+    workflow_runs::WorkflowRuns as _,
+    workflows::{WorkflowList, WorkflowUsage, WorkflowUsageTiming, Workflows as _},
 };
 
 #[cfg(feature = "config")]
@@ -528,16 +530,89 @@ async fn handle_actions_workflows(workflows: &Workflows) -> anyhow::Result<()> {
 
     match &subcmd {
         WorkflowsSubCommand::List => {
-            let workflows = repo.get_all_workflows().await?;
-            println!("Workflows: {:#?}", workflows);
+            let WorkflowList {
+                total_count,
+                workflows,
+            } = repo.get_all_workflows().await?;
+            let workflows = workflows
+                .iter()
+                .map(|w| {
+                    [
+                        format!("|name|{}", w.name),
+                        format!("|id|{}", w.id),
+                        format!("|node_id|{}", w.node_id),
+                        format!("|path|{}", w.path),
+                        format!("|state|{}", w.state),
+                        format!("|created_at|{}", w.created_at),
+                        format!("|updated_at|{}", w.updated_at),
+                        format!("|url|{}", w.url),
+                        format!("|html_url|{}", w.html_url),
+                        format!("|badge_url|{}", w.badge_url),
+                    ]
+                    .join("\n")
+                })
+                .collect::<Vec<_>>()
+                .join("\n|-:|:-|\n");
+            printmd!(
+                r#"|-:|:-|
+|**Field**|**Value**|
+|-:|:-|
+{}
+|-
+
+Total workflows: {}"#,
+                workflows,
+                total_count
+            );
         }
         WorkflowsSubCommand::Get(WorkflowId { workflow_id }) => {
             let workflow = repo.get_a_workflow(*workflow_id).await?;
-            println!("Workflow: {:#?}", workflow);
+            printmd!(
+                r#"|-:|:-|
+|**Field**|**Value**|
+|-:|:-|
+{}
+|-"#,
+                [
+                    format!("|name|{}", workflow.name),
+                    format!("|id|{}", workflow.id),
+                    format!("|node_id|{}", workflow.node_id),
+                    format!("|path|{}", workflow.path),
+                    format!("|state|{}", workflow.state),
+                    format!("|created_at|{}", workflow.created_at),
+                    format!("|updated_at|{}", workflow.updated_at),
+                    format!("|url|{}", workflow.url),
+                    format!("|html_url|{}", workflow.html_url),
+                    format!("|badge_url|{}", workflow.badge_url),
+                ]
+                .join("\n")
+            );
         }
         WorkflowsSubCommand::Usage(WorkflowId { workflow_id }) => {
-            let workflow_usage = repo.get_workflow_usage(*workflow_id).await?;
-            println!("Workflow Usage: {:#?}", workflow_usage);
+            let WorkflowUsage { billable } = repo.get_workflow_usage(*workflow_id).await?;
+            let get_usage_pf = |pf: &str, timing: Option<WorkflowUsageTiming>| {
+                format!(
+                    "|{}|{}|",
+                    pf,
+                    timing
+                        .map(|t| format!("{}ms", t.total_ms))
+                        .unwrap_or_else(|| "unknown".into())
+                )
+            };
+            printmd!(
+                r#"|-:|-:|
+|**Platform**|**Usage**|
+|-:|-:|
+{}
+|-:|-:|
+{}
+|-:|-:|
+{}
+|-"#,
+                get_usage_pf("MACOS", billable.MACOS),
+                get_usage_pf("UBUNTU", billable.UBUNTU),
+                get_usage_pf("WINDOWS", billable.WINDOWS)
+            );
         }
     }
 
