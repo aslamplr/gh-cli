@@ -340,7 +340,7 @@ mod tests {
     fn create_basic_mock_http(path: &str, auth_token: &str) -> mockito::Mock {
         mock("GET", path).match_header(
             "Authorization",
-            Matcher::Exact(format!("bearer {}", auth_token)),
+            Matcher::Exact(format!("Bearer {}", auth_token)),
         )
     }
 
@@ -832,7 +832,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/runs/30433642")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_header("content-type", "application/json")
             .with_body(
@@ -1031,7 +1031,7 @@ mod tests {
         let m = mock("POST", "/aslamplr/gh-cli/actions/runs/30433642/rerun")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .expect(1)
@@ -1053,7 +1053,7 @@ mod tests {
         let m = mock("POST", "/aslamplr/gh-cli/actions/runs/30433642/cancel")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(202)
             .expect(1)
@@ -1075,7 +1075,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/runs/30433642/logs")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(302)
             .with_header("Location", "https://pipelines.actions.githubusercontent.com/ab1f3cCFPB34Nd6imvFxpGZH5hNlDp2wijMwl2gDoO0bcrrlJj/_apis/pipelines/1/runs/19/signedlogcontent?urlExpires=2020-01-22T22%3A44%3A54.1389777Z&urlSigningMethod=HMACV1&urlSignature=2TUDfIg4fm36OJmfPy6km5QD5DLCOkBVzvhWZM8B%2BUY%3D")
@@ -1098,7 +1098,7 @@ mod tests {
         let m = mock("DELETE", "/aslamplr/gh-cli/actions/runs/30433642/logs")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(204)
             .expect(1)
@@ -1120,7 +1120,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/runs/30433642/timing")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")

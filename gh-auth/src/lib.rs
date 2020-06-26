@@ -1,5 +1,5 @@
 use anyhow::Result;
-use url::form_urlencoded::{parse, Serializer};
+use url::form_urlencoded::parse;
 
 include!(concat!(env!("OUT_DIR"), "/constants.rs"));
 
@@ -68,9 +68,8 @@ impl OAuthFlow<'_> {
         let access_token = {
             use futures::{channel::oneshot, lock::Mutex};
             use hyper::{
-                body::to_bytes,
                 service::{make_service_fn, service_fn},
-                Body, Client, Method, Request, Response, Server, StatusCode, Uri,
+                Body, Method, Request, Response, Server, StatusCode,
             };
             use std::sync::Arc;
 
@@ -134,24 +133,20 @@ impl OAuthFlow<'_> {
             let capture_code = async {
                 let (code, state) = auth_code_recv.await?;
                 let _ = shutdown_server_send.send(());
-                let token_url = Uri::builder()
-                    .scheme("https")
-                    .authority(self.host_name)
-                    .path_and_query("/login/oauth/access_token")
-                    .build()?;
-                let client = Client::builder().build::<_, Body>(hyper_rustls::HttpsConnector::new());
-                let form_encoded = Serializer::new(String::new())
-                    .append_pair("client_id", self.client_id)
-                    .append_pair("client_secret", self.client_secret)
-                    .append_pair("code", &code)
-                    .append_pair("state", &state)
-                    .finish();
-                let req = Request::builder()
-                    .method(Method::POST)
-                    .uri(token_url)
-                    .body(Body::from(form_encoded))?;
-                let resp = client.request(req).await?;
-                let resp = to_bytes(resp.into_body()).await?;
+                let token_url = format!("https://{}/login/oauth/access_token", self.host_name);
+                let client = reqwest::Client::new();
+                let form = reqwest::multipart::Form::new()
+                    .text("client_id", self.client_id.to_owned())
+                    .text("client_secret", self.client_secret.to_owned())
+                    .text("code", code)
+                    .text("state", state);
+                let resp = client
+                    .post(&token_url)
+                    .multipart(form)
+                    .send()
+                    .await?
+                    .bytes()
+                    .await?;
                 let parsed = parse(&resp);
                 let access_token = utils::get_item_from_parse(parsed, "access_token");
                 Ok::<_, anyhow::Error>(access_token)

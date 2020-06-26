@@ -163,7 +163,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/secrets")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -219,7 +219,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/secrets/GH_TOKEN")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -255,7 +255,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/secrets/public-key")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -298,7 +298,7 @@ mod tests {
         let m1 = mock("GET", "/aslamplr/gh-cli/actions/secrets/public-key")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -315,7 +315,7 @@ mod tests {
         let m2 = mock("PUT", "/aslamplr/gh-cli/actions/secrets/GH_TOKEN")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .match_body(Matcher::Regex("encrypted_value".to_string()))
             .match_body(Matcher::Regex("key_id".to_string()))
@@ -340,7 +340,7 @@ mod tests {
         let m = mock("DELETE", "/aslamplr/gh-cli/actions/secrets/GH_TOKEN")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(204)
             .with_header("content-type", "application/json")

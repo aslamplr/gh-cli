@@ -123,7 +123,7 @@ mod tests {
         let auth_token = "auth_secret_token";
 
         let m = mock("GET", "/aslamplr/gh-cli/actions/workflows")
-            .match_header("Authorization", Matcher::Exact(format!("bearer {}", auth_token)))
+            .match_header("Authorization", Matcher::Exact(format!("Bearer {}", auth_token)))
             .with_status(201)
             .with_header("content-type", "application/json")
             .with_body(r#"{
@@ -211,7 +211,7 @@ mod tests {
         let workflow_id = 161335;
 
         let m = mock("GET", "/aslamplr/gh-cli/actions/workflows/161335")
-            .match_header("Authorization", Matcher::Exact(format!("bearer {}", auth_token)))
+            .match_header("Authorization", Matcher::Exact(format!("Bearer {}", auth_token)))
             .with_status(201)
             .with_header("content-type", "application/json")
             .with_body(r#"{
@@ -260,7 +260,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/workflows/161335/timing")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")

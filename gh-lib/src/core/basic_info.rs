@@ -43,7 +43,7 @@ impl BasicInfo for RepoRequest<'_> {
             &with_base_url!("{}/readme", repo),
             HttpMethod::GET,
             auth_token,
-        )
+        )?
         .header("Accept", "application/vnd.github.VERSION.raw")
         .call()
         .await?;
@@ -65,7 +65,7 @@ mod tests {
         let m = mock("POST", "/graphql")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -132,7 +132,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/readme")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .match_header("Accept", "application/vnd.github.VERSION.raw")
             .with_status(201)

@@ -116,7 +116,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/runs/29679449/jobs")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -217,7 +217,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/jobs/399444496")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -308,7 +308,7 @@ mod tests {
         let m = mock("GET", "/aslamplr/gh-cli/actions/jobs/399444496/logs")
             .match_header(
                 "Authorization",
-                Matcher::Exact(format!("bearer {}", auth_token)),
+                Matcher::Exact(format!("Bearer {}", auth_token)),
             )
             .with_status(302)
             .with_header("Location", "https://pipelines.actions.githubusercontent.com/ab1f3cCFPB34Nd6imvFxpGZH5hNlDp2wijMwl2gDoO0bcrrlJj/_apis/pipelines/1/jobs/19/signedlogcontent?urlExpires=2020-01-22T22%3A44%3A54.1389777Z&urlSigningMethod=HMACV1&urlSignature=2TUDfIg4fm36OJmfPy6km5QD5DLCOkBVzvhWZM8B%2BUY%3D")
