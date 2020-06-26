@@ -1,8 +1,7 @@
 #![cfg(feature = "secrets")]
 use super::repos::RepoRequest;
-use crate::utils::http::{delete, get};
 #[cfg(feature = "secrets-save")]
-use crate::utils::http::{put, HttpBody};
+use crate::utils::http::HttpBody;
 #[cfg(feature = "secrets-save")]
 use crate::utils::sealed_box::seal;
 use anyhow::Result;
@@ -107,9 +106,13 @@ async fn get_from_gh<T>(path: &str, params: &RepoRequest<'_>) -> Result<T>
 where
     T: serde::de::DeserializeOwned,
 {
-    let RepoRequest(repo, auth_token) = params;
+    let RepoRequest {
+        repo,
+        auth_token,
+        http_client,
+    } = params;
     let url = with_base_url!("{}/{}", repo, path);
-    let resp = get(&url, &auth_token).await?;
+    let resp = http_client.get(&url, &auth_token).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
@@ -132,21 +135,30 @@ async fn put_gh_secret(
     name: &str,
     secret_save_req: &SecretSaveRequest,
 ) -> Result<()> {
-    let RepoRequest(repo, auth_token) = params;
-    let url = with_base_url!("{}/actions/secrets/{}", repo, name);
-    put(
-        &url,
-        HttpBody::try_from_serialize(&secret_save_req)?,
+    let RepoRequest {
+        repo,
         auth_token,
-    )
-    .await?;
+        http_client,
+    } = params;
+    let url = with_base_url!("{}/actions/secrets/{}", repo, name);
+    http_client
+        .put(
+            &url,
+            HttpBody::try_from_serialize(&secret_save_req)?,
+            auth_token,
+        )
+        .await?;
     Ok(())
 }
 
 async fn delete_a_secret(params: &RepoRequest<'_>, name: &str) -> Result<()> {
-    let RepoRequest(repo, auth_token) = params;
+    let RepoRequest {
+        repo,
+        auth_token,
+        http_client,
+    } = params;
     let url = with_base_url!("{}/actions/secrets/{}", repo, name);
-    delete(&url, &auth_token).await?;
+    http_client.delete(&url, &auth_token).await?;
     Ok(())
 }
 
