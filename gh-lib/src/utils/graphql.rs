@@ -9,7 +9,6 @@ const BASE_URL: &str = crate::BASE_URL;
 pub async fn query_graphql<T, U>(
     http_client: &HttpClient,
     query: QueryBody<T>,
-    auth_token: &str,
 ) -> Result<Response<U>>
 where
     T: serde::Serialize,
@@ -17,9 +16,5 @@ where
 {
     let body = HttpBody::try_from_serialize(&query)?;
     let url = with_base_url!("graphql");
-    http_client
-        .post(&url, body, auth_token)
-        .await?
-        .deserialize()
-        .await
+    http_client.post(&url, body).await?.deserialize().await
 }

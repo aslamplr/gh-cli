@@ -79,37 +79,25 @@ async fn get_workflow_run_jobs(
     params: &RepoRequest<'_>,
     run_id: u32,
 ) -> Result<WorkflowRunJobList> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/runs/{}/jobs", repo, run_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
 
 async fn get_a_workflow_run_job(params: &RepoRequest<'_>, job_id: u32) -> Result<WorkflowRunJob> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/jobs/{}", repo, job_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
 
 async fn get_job_logs_url(params: &RepoRequest<'_>, job_id: u32) -> Result<String> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/jobs/{}/logs", repo, job_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.get_header("Location");
     resp.ok_or_else(|| anyhow::anyhow!("Location header with log url not found in response!"))
 }

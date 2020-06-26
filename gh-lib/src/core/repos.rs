@@ -9,9 +9,8 @@ pub struct Repo<'a> {
 
 #[derive(Debug)]
 pub struct RepoRequest<'a> {
-    pub repo: Repo<'a>,
-    pub auth_token: &'a str,
-    pub http_client: HttpClient,
+    pub(crate) repo: Repo<'a>,
+    pub(crate) http_client: HttpClient,
 }
 
 impl<'a> RepoRequest<'a> {
@@ -24,12 +23,8 @@ impl<'a> RepoRequest<'a> {
             repo_owner: &repo_owner,
             repo_name: &repo_name[1..],
         };
-        let http_client = HttpClient::new()?;
-        Ok(RepoRequest {
-            repo,
-            auth_token,
-            http_client,
-        })
+        let http_client = HttpClient::new(auth_token)?;
+        Ok(RepoRequest { repo, http_client })
     }
 }
 

@@ -30,29 +30,17 @@ impl From<&Repo<'_>> for basic_info_response::Variables {
 #[async_trait]
 impl BasicInfo for RepoRequest<'_> {
     async fn get_basic_info(&self) -> Result<BasicInfoResponse> {
-        let RepoRequest {
-            repo,
-            auth_token,
-            http_client,
-        } = self;
+        let RepoRequest { repo, http_client } = self;
         let graphql_query = RepoBasicInfoQuery::build_query(repo.into());
-        let resp = query_graphql(http_client, graphql_query, &auth_token).await?;
+        let resp = query_graphql(http_client, graphql_query).await?;
         resp.data
             .ok_or_else(|| anyhow::anyhow!("Couldn't find repository basic information!"))
     }
 
     async fn get_raw_readme(&self) -> Result<String> {
-        let RepoRequest {
-            repo,
-            auth_token,
-            http_client,
-        } = self;
+        let RepoRequest { repo, http_client } = self;
         let resp = http_client
-            .request(
-                &with_base_url!("{}/readme", repo),
-                HttpMethod::GET,
-                auth_token,
-            )
+            .request(&with_base_url!("{}/readme", repo), HttpMethod::GET)
             .header("Accept", "application/vnd.github.VERSION.raw")
             .call()
             .await?;

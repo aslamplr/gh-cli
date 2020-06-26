@@ -106,13 +106,9 @@ async fn get_from_gh<T>(path: &str, params: &RepoRequest<'_>) -> Result<T>
 where
     T: serde::de::DeserializeOwned,
 {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/{}", repo, path);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
@@ -135,30 +131,18 @@ async fn put_gh_secret(
     name: &str,
     secret_save_req: &SecretSaveRequest,
 ) -> Result<()> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/secrets/{}", repo, name);
     http_client
-        .put(
-            &url,
-            HttpBody::try_from_serialize(&secret_save_req)?,
-            auth_token,
-        )
+        .put(&url, HttpBody::try_from_serialize(&secret_save_req)?)
         .await?;
     Ok(())
 }
 
 async fn delete_a_secret(params: &RepoRequest<'_>, name: &str) -> Result<()> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/secrets/{}", repo, name);
-    http_client.delete(&url, &auth_token).await?;
+    http_client.delete(&url).await?;
     Ok(())
 }
 

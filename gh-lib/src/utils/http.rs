@@ -1,13 +1,22 @@
 #![cfg(any(feature = "graphql-api", feature = "http-api"))]
 use anyhow::{anyhow, Result};
 pub use reqwest::Method as HttpMethod;
-use reqwest::{Body, Client, Request, RequestBuilder, Response};
+use reqwest::{header, Body, Client, Request, RequestBuilder, Response};
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
-fn create_https_client() -> Result<Client> {
+fn create_https_client(auth_token: &str) -> Result<Client> {
+    let headers = {
+        let mut headers = header::HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            header::HeaderValue::from_str(&format!("Bearer {}", auth_token))?,
+        );
+        headers
+    };
     reqwest::ClientBuilder::new()
         .user_agent(APP_USER_AGENT)
+        .default_headers(headers)
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| anyhow::anyhow!("An error occured while creating the client, {:?}", e))
@@ -130,59 +139,45 @@ pub struct HttpClient {
 }
 
 impl HttpClient {
-    pub fn new() -> Result<Self> {
+    pub fn new(auth_token: &str) -> Result<Self> {
         Ok(Self {
-            inner: create_https_client()?,
+            inner: create_https_client(auth_token)?,
         })
     }
 
-    pub fn request(&self, url: &str, method: HttpMethod, auth_token: &str) -> HttpRequestBuilder {
+    pub fn request(&self, url: &str, method: HttpMethod) -> HttpRequestBuilder {
         let client = self.inner.clone();
-        let builder = client.request(method, url).bearer_auth(auth_token);
+        let builder = client.request(method, url);
         HttpRequestBuilder::from(client, builder)
     }
 
-    pub async fn get(&self, url: &str, auth_token: &str) -> Result<HttpResponse> {
-        self.request(&url, HttpMethod::GET, &auth_token)
-            .call()
-            .await
+    pub async fn get(&self, url: &str) -> Result<HttpResponse> {
+        self.request(&url, HttpMethod::GET).call().await
     }
 
-    pub async fn post(&self, url: &str, body: HttpBody, auth_token: &str) -> Result<HttpResponse> {
-        self.request(&url, HttpMethod::POST, &auth_token)
+    pub async fn post(&self, url: &str, body: HttpBody) -> Result<HttpResponse> {
+        self.request(&url, HttpMethod::POST)
             .body(body)?
             .call()
             .await
     }
 
-    pub async fn put(&self, url: &str, body: HttpBody, auth_token: &str) -> Result<HttpResponse> {
-        self.request(&url, HttpMethod::PUT, &auth_token)
+    pub async fn put(&self, url: &str, body: HttpBody) -> Result<HttpResponse> {
+        self.request(&url, HttpMethod::PUT).body(body)?.call().await
+    }
+
+    pub async fn _patch(&self, url: &str, body: HttpBody) -> Result<HttpResponse> {
+        self.request(&url, HttpMethod::PATCH)
             .body(body)?
             .call()
             .await
     }
 
-    pub async fn _patch(
-        &self,
-        url: &str,
-        body: HttpBody,
-        auth_token: &str,
-    ) -> Result<HttpResponse> {
-        self.request(&url, HttpMethod::PATCH, &auth_token)
-            .body(body)?
-            .call()
-            .await
+    pub async fn delete(&self, url: &str) -> Result<HttpResponse> {
+        self.request(&url, HttpMethod::DELETE).call().await
     }
 
-    pub async fn delete(&self, url: &str, auth_token: &str) -> Result<HttpResponse> {
-        self.request(&url, HttpMethod::DELETE, &auth_token)
-            .call()
-            .await
-    }
-
-    pub async fn _options(&self, url: &str, auth_token: &str) -> Result<HttpResponse> {
-        self.request(&url, HttpMethod::OPTIONS, &auth_token)
-            .call()
-            .await
+    pub async fn _options(&self, url: &str) -> Result<HttpResponse> {
+        self.request(&url, HttpMethod::OPTIONS).call().await
     }
 }

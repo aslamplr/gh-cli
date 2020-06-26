@@ -255,11 +255,7 @@ async fn get_workflow_runs(
     workflow_id: Option<u32>,
     filter: Option<&WorkflowRunQueryParams<'_>>,
 ) -> Result<WorkflowRunList> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = if let Some(workflow_id) = workflow_id {
         with_base_url!("{}/actions/workflows/{}/runs", repo, workflow_id)
     } else {
@@ -286,80 +282,52 @@ async fn get_workflow_runs(
     } else {
         url
     };
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
 
 async fn get_a_workflow_run(params: &RepoRequest<'_>, run_id: u32) -> Result<WorkflowRun> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/runs/{}", repo, run_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
 
 async fn rerun_a_workflow(params: &RepoRequest<'_>, run_id: u32) -> Result<()> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/runs/{}/rerun", repo, run_id);
-    http_client
-        .post(&url, HttpBody::empty(), &auth_token)
-        .await?;
+    http_client.post(&url, HttpBody::empty()).await?;
     Ok(())
 }
 
 async fn cancel_a_workflow_run(params: &RepoRequest<'_>, run_id: u32) -> Result<()> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/runs/{}/cancel", repo, run_id);
-    http_client
-        .post(&url, HttpBody::empty(), &auth_token)
-        .await?;
+    http_client.post(&url, HttpBody::empty()).await?;
     Ok(())
 }
 
 async fn get_run_logs_url(params: &RepoRequest<'_>, run_id: u32) -> Result<String> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/runs/{}/logs", repo, run_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.get_header("Location");
     resp.ok_or_else(|| anyhow::anyhow!("Location header with log url not found in response!"))
 }
 
 async fn delete_run_logs(params: &RepoRequest<'_>, run_id: u32) -> Result<()> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/runs/{}/logs", repo, run_id);
-    http_client.delete(&url, &auth_token).await?;
+    http_client.delete(&url).await?;
     Ok(())
 }
 
 async fn get_workflow_run_usage(params: &RepoRequest<'_>, run_id: u32) -> Result<WorkflowRunUsage> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/runs/{}/timing", repo, run_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }

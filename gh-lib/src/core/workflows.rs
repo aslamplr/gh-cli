@@ -86,37 +86,25 @@ pub struct WorkflowUsageTiming {
 }
 
 async fn get_all_workflows(params: &RepoRequest<'_>) -> Result<WorkflowList> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/workflows", repo);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
 
 async fn get_a_workflow(params: &RepoRequest<'_>, workflow_id: u32) -> Result<Workflow> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/workflows/{}", repo, workflow_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     let resp = resp.deserialize().await?;
     Ok(resp)
 }
 
 async fn get_workflow_usage(params: &RepoRequest<'_>, workflow_id: u32) -> Result<WorkflowUsage> {
-    let RepoRequest {
-        repo,
-        auth_token,
-        http_client,
-    } = params;
+    let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/actions/workflows/{}/timing", repo, workflow_id);
-    let resp = http_client.get(&url, &auth_token).await?;
+    let resp = http_client.get(&url).await?;
     // eprintln!("body: {:?}", resp.body().await);
     // Err(anyhow::anyhow!("Error!"))
     let resp = resp.deserialize().await?;
