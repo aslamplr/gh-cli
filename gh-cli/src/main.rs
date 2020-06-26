@@ -46,11 +46,9 @@ fn get_git_addr_from_repo() -> anyhow::Result<String> {
         .args(&["config", "--get", "remote.origin.url"])
         .output()?
         .stdout;
-    lazy_static::lazy_static! {
-        static ref RE: regex::Regex = regex::Regex::new(r"github\.com[:/](\S+)/(\S+)\.git").unwrap();
-    }
+    let re = regex::Regex::new(r"github\.com[:/](\S+)/(\S+)\.git").unwrap();
     let regex_cap_err = || anyhow::anyhow!("Unable to capture github git repo!");
-    RE.captures(std::str::from_utf8(&output)?)
+    re.captures(std::str::from_utf8(&output)?)
         .and_then(|caps| {
             match (
                 caps.get(1).map(|c| c.as_str()),
