@@ -415,7 +415,7 @@ async fn handle_login() -> anyhow::Result<()> {
         #[cfg(feature = "config")]
         {
             let config = config::Config::new("_", &access_token);
-            if let Ok(config_path) = config::save_config(config) {
+            if let Ok(config_path) = config::save_config(config).await {
                 eprintln!("# Access token saved to config file: {:?}", config_path);
             } else {
                 eprintln!("# Unable to establish a config file!");
@@ -760,7 +760,7 @@ async fn handle_actions_secrets(secrets: &Secrets) -> anyhow::Result<()> {
 async fn main() -> anyhow::Result<()> {
     #[cfg(feature = "config")]
     {
-        if let Some(config::Config { access_token, .. }) = config::get_config() {
+        if let Some(config::Config { access_token, .. }) = config::get_config().await {
             const GH_ACCESS_TOKEN: &str = "GH_ACCESS_TOKEN";
             if std::env::var(GH_ACCESS_TOKEN).is_err() {
                 std::env::set_var(GH_ACCESS_TOKEN, access_token);
