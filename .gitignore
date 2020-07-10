@@ -5,3 +5,5 @@ schema.public.graphql
 # IDE 
 .vscode
 
+# VIM
+*.swp

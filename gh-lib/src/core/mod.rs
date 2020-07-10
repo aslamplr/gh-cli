@@ -1,5 +1,7 @@
 #[cfg(feature = "basic-info")]
 pub mod basic_info;
+#[cfg(feature = "collaborators")]
+pub mod collaborators;
 pub mod repos;
 #[cfg(feature = "secrets")]
 pub mod secrets;
