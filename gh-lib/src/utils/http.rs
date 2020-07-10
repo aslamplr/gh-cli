@@ -1,7 +1,7 @@
 #![cfg(any(feature = "graphql-api", feature = "http-api"))]
 use anyhow::{anyhow, Result};
-pub use reqwest::Method as HttpMethod;
 use reqwest::{header, Body, Client, Request, RequestBuilder, Response};
+pub use reqwest::{Method as HttpMethod, StatusCode};
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -54,6 +54,10 @@ pub struct HttpResponse {
 impl HttpResponse {
     pub fn from(response: Response) -> HttpResponse {
         HttpResponse { inner: response }
+    }
+
+    pub fn status(&self) -> StatusCode {
+        self.inner.status()
     }
 
     pub async fn deserialize<T>(self) -> Result<T>

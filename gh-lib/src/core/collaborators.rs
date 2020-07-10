@@ -1,5 +1,6 @@
 #![cfg(feature = "collaborators")]
 use super::repos::RepoRequest;
+use crate::utils::http::{HttpBody, StatusCode};
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,11 @@ const BASE_URL: &str = "https://api.github.com/repos";
 pub trait Collaborators {
     async fn get_collaborators(&self) -> Result<Vec<Collaborator>>;
     async fn is_collaborator(&self, username: &str) -> Result<bool>;
+    async fn add_collaborator<T: Into<CollaboratorPermission> + Send>(
+        &self,
+        username: &str,
+        permission: T,
+    ) -> Result<AddCollaboratorResponse>;
 }
 
 #[async_trait]
@@ -21,6 +27,14 @@ impl Collaborators for RepoRequest<'_> {
 
     async fn is_collaborator(&self, username: &str) -> Result<bool> {
         is_collaborator(&self, username).await
+    }
+
+    async fn add_collaborator<T: Into<CollaboratorPermission> + Send>(
+        &self,
+        username: &str,
+        permission: T,
+    ) -> Result<AddCollaboratorResponse> {
+        add_collaborator(&self, username, permission.into()).await
     }
 }
 
@@ -55,6 +69,48 @@ pub struct Permission {
     pub admin: bool,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum CollaboratorPermission {
+    Pull,
+    Push,
+    Admin,
+    Maintain,
+    Triage,
+}
+
+impl<T: AsRef<str>> From<T> for CollaboratorPermission {
+    fn from(permission: T) -> Self {
+        match permission.as_ref() {
+            "pull" => Self::Pull,
+            "push" => Self::Push,
+            "admin" => Self::Admin,
+            "maintain" => Self::Maintain,
+            "triage" => Self::Triage,
+            _ => Self::Push,
+        }
+    }
+}
+
+impl std::fmt::Display for CollaboratorPermission {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let permission = match self {
+            Self::Pull => "pull",
+            Self::Push => "push",
+            Self::Admin => "admin",
+            Self::Maintain => "maintain",
+            Self::Triage => "triage",
+        };
+        write!(f, "{}", permission)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum AddCollaboratorResponse {
+    InvitationCreated,
+    AlreadyCollaborator,
+}
+
 async fn get_collaborators(params: &RepoRequest<'_>) -> Result<Vec<Collaborator>> {
     let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/collaborators", repo);
@@ -65,6 +121,27 @@ async fn is_collaborator(params: &RepoRequest<'_>, username: &str) -> Result<boo
     let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/collaborators/{}", repo, username);
     Ok(http_client.get(&url).await.is_ok())
+}
+
+async fn add_collaborator(
+    params: &RepoRequest<'_>,
+    username: &str,
+    permission: CollaboratorPermission,
+) -> Result<AddCollaboratorResponse> {
+    let RepoRequest { repo, http_client } = params;
+    let url = with_base_url!("{}/collaborators/{}", repo, username);
+    match http_client
+        .put(
+            &url,
+            HttpBody::from(format!(r#"{{"permission": "{}"}}"#, permission)),
+        )
+        .await?
+        .status()
+    {
+        StatusCode::CREATED => Ok(AddCollaboratorResponse::InvitationCreated),
+        StatusCode::NO_CONTENT => Ok(AddCollaboratorResponse::AlreadyCollaborator),
+        status => Err(anyhow::anyhow!("Unknown: {}", status)),
+    }
 }
 
 #[cfg(test)]
@@ -191,6 +268,30 @@ mod tests {
 
         m.assert();
         assert!(!is_collaborator);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn add_contributor() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("PUT", "/aslamplr/gh-cli/collaborators/aslamplr")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("Bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let resp = repo_req
+            .add_collaborator("aslamplr", CollaboratorPermission::Push)
+            .await?;
+
+        m.assert();
+        assert_eq!(AddCollaboratorResponse::InvitationCreated, resp);
         Ok(())
     }
 }
