@@ -2,6 +2,8 @@ use clap::Clap;
 use crossterm::style::{Colorize, Styler};
 #[cfg(feature = "basic-info")]
 use gh_lib::core::basic_info::{basic_info_response, BasicInfo as _};
+#[cfg(feature = "collaborators")]
+use gh_lib::core::collaborators::Collaborators as _;
 use gh_lib::core::repos::RepoRequest;
 #[cfg(feature = "secrets")]
 use gh_lib::core::secrets::{Secret, SecretListResponse, Secrets as _};
@@ -87,7 +89,7 @@ enum SubCommand {
     #[cfg(feature = "login")]
     #[clap(about = "Login using GitHub OAuth (requires web browser)")]
     Login,
-    #[cfg(feature = "basic-info")]
+    #[cfg(any(feature = "basic-info", feature = "collaborators"))]
     #[clap(about = "Repository operations")]
     Repo(Repo),
     #[cfg(feature = "secrets")]
@@ -98,7 +100,7 @@ enum SubCommand {
     Actions(Actions),
 }
 
-#[cfg(feature = "basic-info")]
+#[cfg(any(feature = "basic-info", feature = "collaborators"))]
 #[derive(Clap)]
 #[clap(
     name = "GitHub Repo CLI",
@@ -107,6 +109,24 @@ enum SubCommand {
     about = "GitHub Repo CLI"
 )]
 struct Repo {
+    #[clap(subcommand)]
+    subcmd: RepoSubCommand,
+}
+
+#[cfg(any(feature = "basic-info", feature = "collaborators"))]
+#[derive(Clap)]
+enum RepoSubCommand {
+    #[cfg(feature = "basic-info")]
+    #[clap(about = "View repository basic information")]
+    View(RepoView),
+    #[cfg(feature = "collaborators")]
+    #[clap(about = "List and manage repository collaborators")]
+    Collaborators(Collaborators),
+}
+
+#[cfg(feature = "basic-info")]
+#[derive(Clap)]
+struct RepoView {
     #[clap(
         long = "name",
         short = "n",
@@ -133,6 +153,64 @@ struct Repo {
     auth_token: String,
     #[clap(long, short, about = "Print README")]
     readme: bool,
+}
+
+#[cfg(feature = "collaborators")]
+#[derive(Clap)]
+struct Collaborators {
+    #[clap(
+        long = "name",
+        short = "n",
+        value_name = "OWNER/NAME",
+        about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
+        display_order = 1,
+        takes_value = true,
+        required = *IS_ADDR_REQUIRED,
+        default_value = &REPO_ADDR,
+        hide_default_value = true,
+    )]
+    name: String,
+    #[clap(
+        long = "auth_token",
+        short = "t",
+        value_name = "PERSONAL_ACCESS_TOKEN",
+        env = "GH_ACCESS_TOKEN",
+        hide_env_values = true,
+        about = "Generate token - https://github.com/settings/tokens",
+        display_order = 2,
+        takes_value = true,
+        required = true
+    )]
+    auth_token: String,
+    #[clap(subcommand)]
+    subcmd: CollaboratorsSubCommand,
+}
+
+#[cfg(feature = "collaborators")]
+#[derive(Clap)]
+enum CollaboratorsSubCommand {
+    #[clap(about = "List all repository contributors")]
+    List,
+    #[clap(about = "Check if the user with username is a collaborator to the the repository")]
+    Check(CollaboratorCheck),
+    #[clap(about = "Add the user with username as a collaborator to the repository")]
+    Add(CollaboratorAdd),
+}
+
+#[cfg(feature = "collaborators")]
+#[derive(Clap)]
+struct CollaboratorCheck {
+    #[clap(name = "USER_NAME", about = "GitHub username", index = 1)]
+    username: String,
+}
+
+#[cfg(feature = "collaborators")]
+#[derive(Clap)]
+struct CollaboratorAdd {
+    #[clap(name = "USER_NAME", about = "GitHub username", index = 1)]
+    username: String,
+    #[clap( name = "PERMISSION", about = "Contributor permission", index = 2, possible_values = &["pull", "push", "admin", "maintain", "triage"], default_value = "push")]
+    permission: String,
 }
 
 #[cfg(any(feature = "secrets", feature = "workflows"))]
@@ -442,8 +520,8 @@ async fn handle_login() -> anyhow::Result<()> {
 }
 
 #[cfg(feature = "basic-info")]
-async fn handle_repo(repo: &Repo) -> anyhow::Result<()> {
-    let Repo {
+async fn handle_repo_view(repo: &RepoView) -> anyhow::Result<()> {
+    let RepoView {
         name,
         auth_token,
         readme,
@@ -513,6 +591,36 @@ async fn handle_repo(repo: &Repo) -> anyhow::Result<()> {
             printmd("---");
         }
     }
+    Ok(())
+}
+
+#[cfg(feature = "basic-info")]
+async fn handle_repo_collaborators(collab: &Collaborators) -> anyhow::Result<()> {
+    let Collaborators {
+        name,
+        auth_token,
+        subcmd,
+    } = collab;
+
+    let repo = RepoRequest::try_from(&name, &auth_token)?;
+
+    match &subcmd {
+        CollaboratorsSubCommand::List => {
+            let collaborators = repo.get_collaborators().await?;
+            println!("Collaborators: \n{:#?}", collaborators);
+        }
+        CollaboratorsSubCommand::Check(check) => {
+            let is_collaborator = repo.is_collaborator(&check.username).await?;
+            println!("Is collaborator: {}", is_collaborator);
+        }
+        CollaboratorsSubCommand::Add(add) => {
+            let add_response = repo
+                .add_collaborator(&add.username, &add.permission)
+                .await?;
+            println!("Add collaborator response: {:?}", add_response);
+        }
+    }
+
     Ok(())
 }
 
@@ -780,7 +888,10 @@ async fn main() -> anyhow::Result<()> {
         #[cfg(feature = "login")]
         SubCommand::Login => handle_login().await?,
         #[cfg(feature = "basic-info")]
-        SubCommand::Repo(repo) => handle_repo(&repo).await?,
+        SubCommand::Repo(repo) => match repo.subcmd {
+            RepoSubCommand::View(repo_view) => handle_repo_view(&repo_view).await?,
+            RepoSubCommand::Collaborators(collab) => handle_repo_collaborators(&collab).await?,
+        },
         #[cfg(feature = "secrets")]
         SubCommand::Secrets(secrets) => {
             eprint!(
