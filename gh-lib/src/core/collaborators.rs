@@ -10,12 +10,17 @@ const BASE_URL: &str = "https://api.github.com/repos";
 #[async_trait]
 pub trait Collaborators {
     async fn get_collaborators(&self) -> Result<Vec<Collaborator>>;
+    async fn is_collaborator(&self, username: &str) -> Result<bool>;
 }
 
 #[async_trait]
 impl Collaborators for RepoRequest<'_> {
     async fn get_collaborators(&self) -> Result<Vec<Collaborator>> {
         get_collaborators(&self).await
+    }
+
+    async fn is_collaborator(&self, username: &str) -> Result<bool> {
+        is_collaborator(&self, username).await
     }
 }
 
@@ -54,6 +59,12 @@ async fn get_collaborators(params: &RepoRequest<'_>) -> Result<Vec<Collaborator>
     let RepoRequest { repo, http_client } = params;
     let url = with_base_url!("{}/collaborators", repo);
     http_client.get(&url).await?.deserialize().await
+}
+
+async fn is_collaborator(params: &RepoRequest<'_>, username: &str) -> Result<bool> {
+    let RepoRequest { repo, http_client } = params;
+    let url = with_base_url!("{}/collaborators/{}", repo, username);
+    Ok(http_client.get(&url).await.is_ok())
 }
 
 #[cfg(test)]
@@ -136,6 +147,50 @@ mod tests {
 
         m.assert();
         assert_eq!(collaborators, expected_collaborators);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn is_collaborator_truthy() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/collaborators/aslamplr")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("Bearer {}", auth_token)),
+            )
+            .with_status(201)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let is_collaborator = repo_req.is_collaborator("aslamplr").await?;
+
+        m.assert();
+        assert!(is_collaborator);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn is_collaborator_falsy() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/collaborators/aslamplr")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("Bearer {}", auth_token)),
+            )
+            .with_status(404)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let is_collaborator = repo_req.is_collaborator("aslamplr").await?;
+
+        m.assert();
+        assert!(!is_collaborator);
         Ok(())
     }
 }
