@@ -17,6 +17,8 @@ pub trait Collaborators {
         username: &str,
         permission: T,
     ) -> Result<AddCollaboratorResponse>;
+    async fn remove_collaborator(&self, username: &str) -> Result<()>;
+    async fn get_permission(&self, username: &str) -> Result<CollaboratorPermissionResponse>;
 }
 
 #[async_trait]
@@ -35,6 +37,14 @@ impl Collaborators for RepoRequest<'_> {
         permission: T,
     ) -> Result<AddCollaboratorResponse> {
         add_collaborator(&self, username, permission.into()).await
+    }
+
+    async fn remove_collaborator(&self, username: &str) -> Result<()> {
+        remove_collaborator(&self, username).await
+    }
+
+    async fn get_permission(&self, username: &str) -> Result<CollaboratorPermissionResponse> {
+        get_permission(&self, username).await
     }
 }
 
@@ -76,6 +86,11 @@ pub enum CollaboratorPermission {
     Admin,
     Maintain,
     Triage,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct CollaboratorPermissionResponse {
+    pub permission: String,
 }
 
 impl<T: AsRef<str>> From<T> for CollaboratorPermission {
@@ -142,6 +157,22 @@ async fn add_collaborator(
         StatusCode::NO_CONTENT => Ok(AddCollaboratorResponse::AlreadyCollaborator),
         status => Err(anyhow::anyhow!("Unknown: {}", status)),
     }
+}
+
+async fn remove_collaborator(params: &RepoRequest<'_>, username: &str) -> Result<()> {
+    let RepoRequest { repo, http_client } = params;
+    let url = with_base_url!("{}/collaborators/{}", repo, username);
+    http_client.delete(&url).await?;
+    Ok(())
+}
+
+async fn get_permission(
+    params: &RepoRequest<'_>,
+    username: &str,
+) -> Result<CollaboratorPermissionResponse> {
+    let RepoRequest { repo, http_client } = params;
+    let url = with_base_url!("{}/collaborators/{}/permission", repo, username);
+    Ok(http_client.get(&url).await?.deserialize().await?)
 }
 
 #[cfg(test)]
@@ -292,6 +323,80 @@ mod tests {
 
         m.assert();
         assert_eq!(AddCollaboratorResponse::InvitationCreated, resp);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn remove_collaborator() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("DELETE", "/aslamplr/gh-cli/collaborators/aslamplr")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("Bearer {}", auth_token)),
+            )
+            .with_status(204)
+            .expect(1)
+            .create();
+
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        repo_req.remove_collaborator("aslamplr").await?;
+
+        m.assert();
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_permission() -> Result<()> {
+        let repo_addr = "aslamplr/gh-cli";
+        let auth_token = "auth_secret_token";
+
+        let m = mock("GET", "/aslamplr/gh-cli/collaborators/aslamplr/permission")
+            .match_header(
+                "Authorization",
+                Matcher::Exact(format!("Bearer {}", auth_token)),
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"
+{
+  "permission": "admin",
+  "user": {
+    "login": "octocat",
+    "id": 1,
+    "node_id": "MDQ6VXNlcjE=",
+    "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/octocat",
+    "html_url": "https://github.com/octocat",
+    "followers_url": "https://api.github.com/users/octocat/followers",
+    "following_url": "https://api.github.com/users/octocat/following{/other_user}",
+    "gists_url": "https://api.github.com/users/octocat/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/octocat/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/octocat/subscriptions",
+    "organizations_url": "https://api.github.com/users/octocat/orgs",
+    "repos_url": "https://api.github.com/users/octocat/repos",
+    "events_url": "https://api.github.com/users/octocat/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/octocat/received_events",
+    "type": "User",
+    "site_admin": false
+  }
+}
+"#,
+            )
+            .expect(1)
+            .create();
+
+        let expected_permission = CollaboratorPermissionResponse {
+            permission: "admin".into(),
+        };
+        let repo_req = RepoRequest::try_from(repo_addr, auth_token)?;
+        let permission = repo_req.get_permission("aslamplr").await?;
+
+        m.assert();
+        assert_eq!(permission, expected_permission);
         Ok(())
     }
 }
