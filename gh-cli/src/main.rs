@@ -192,21 +192,25 @@ enum CollaboratorsSubCommand {
     #[clap(about = "List all repository contributors")]
     List,
     #[clap(about = "Check if the user with username is a collaborator to the the repository")]
-    Check(CollaboratorCheck),
+    Check(CollaboratorUser),
     #[clap(about = "Add the user with username as a collaborator to the repository")]
-    Add(CollaboratorAdd),
+    Add(CollaboratorUserWithPermission),
+    #[clap(about = "Remove the user with username as a collaborator from the repository")]
+    Remove(CollaboratorUser),
+    #[clap(about = "Get collaborators permission for the repository")]
+    Permission(CollaboratorUser),
 }
 
 #[cfg(feature = "collaborators")]
 #[derive(Clap)]
-struct CollaboratorCheck {
+struct CollaboratorUser {
     #[clap(name = "USER_NAME", about = "GitHub username", index = 1)]
     username: String,
 }
 
 #[cfg(feature = "collaborators")]
 #[derive(Clap)]
-struct CollaboratorAdd {
+struct CollaboratorUserWithPermission {
     #[clap(name = "USER_NAME", about = "GitHub username", index = 1)]
     username: String,
     #[clap( name = "PERMISSION", about = "Contributor permission", index = 2, possible_values = &["pull", "push", "admin", "maintain", "triage"], default_value = "push")]
@@ -609,15 +613,23 @@ async fn handle_repo_collaborators(collab: &Collaborators) -> anyhow::Result<()>
             let collaborators = repo.get_collaborators().await?;
             println!("Collaborators: \n{:#?}", collaborators);
         }
-        CollaboratorsSubCommand::Check(check) => {
-            let is_collaborator = repo.is_collaborator(&check.username).await?;
+        CollaboratorsSubCommand::Check(user) => {
+            let is_collaborator = repo.is_collaborator(&user.username).await?;
             println!("Is collaborator: {}", is_collaborator);
         }
-        CollaboratorsSubCommand::Add(add) => {
+        CollaboratorsSubCommand::Add(user) => {
             let add_response = repo
-                .add_collaborator(&add.username, &add.permission)
+                .add_collaborator(&user.username, &user.permission)
                 .await?;
             println!("Add collaborator response: {:?}", add_response);
+        }
+        CollaboratorsSubCommand::Remove(user) => {
+            repo.remove_collaborator(&user.username).await?;
+            println!("Removed collaborator");
+        }
+        CollaboratorsSubCommand::Permission(user) => {
+            let resp = repo.get_permission(&user.username).await?;
+            println!("User permission: {}", resp.permission);
         }
     }
 
