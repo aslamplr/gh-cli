@@ -42,4 +42,4 @@ mockito = "0.26"
 
 [build-dependencies]
 anyhow = "1.0"
-curl = { version = "0.4.30" }
+curl = { version = "0.4.31" }
