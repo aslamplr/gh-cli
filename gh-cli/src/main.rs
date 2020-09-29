@@ -129,7 +129,7 @@ enum RepoSubCommand {
 struct RepoView {
     #[clap(
         long = "name",
-        short = "n",
+        short = 'n',
         value_name = "OWNER/NAME",
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
@@ -141,7 +141,7 @@ struct RepoView {
     name: String,
     #[clap(
         long = "auth_token",
-        short = "t",
+        short = 't',
         value_name = "PERSONAL_ACCESS_TOKEN",
         env = "GH_ACCESS_TOKEN",
         hide_env_values = true,
@@ -160,7 +160,7 @@ struct RepoView {
 struct Collaborators {
     #[clap(
         long = "name",
-        short = "n",
+        short = 'n',
         value_name = "OWNER/NAME",
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
@@ -172,7 +172,7 @@ struct Collaborators {
     name: String,
     #[clap(
         long = "auth_token",
-        short = "t",
+        short = 't',
         value_name = "PERSONAL_ACCESS_TOKEN",
         env = "GH_ACCESS_TOKEN",
         hide_env_values = true,
@@ -252,7 +252,7 @@ enum ActionsSubCommand {
 struct Workflows {
     #[clap(
         long = "auth_token",
-        short = "t",
+        short = 't',
         value_name = "PERSONAL_ACCESS_TOKEN",
         env = "GH_ACCESS_TOKEN",
         hide_env_values = true,
@@ -264,7 +264,7 @@ struct Workflows {
     auth_token: String,
     #[clap(
         long = "name",
-        short = "n",
+        short = 'n',
         value_name = "OWNER/NAME",
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
@@ -297,7 +297,7 @@ struct WorkflowId {
 struct WorkflowRuns {
     #[clap(
         long = "auth_token",
-        short = "t",
+        short = 't',
         value_name = "PERSONAL_ACCESS_TOKEN",
         env = "GH_ACCESS_TOKEN",
         hide_env_values = true,
@@ -309,7 +309,7 @@ struct WorkflowRuns {
     auth_token: String,
     #[clap(
         long = "name",
-        short = "n",
+        short = 'n',
         value_name = "OWNER/NAME",
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
@@ -355,7 +355,7 @@ struct WorkflowRunId {
 struct WorkflowJobs {
     #[clap(
         long = "auth_token",
-        short = "t",
+        short = 't',
         value_name = "PERSONAL_ACCESS_TOKEN",
         env = "GH_ACCESS_TOKEN",
         hide_env_values = true,
@@ -367,7 +367,7 @@ struct WorkflowJobs {
     auth_token: String,
     #[clap(
         long = "name",
-        short = "n",
+        short = 'n',
         value_name = "OWNER/NAME",
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
@@ -403,7 +403,7 @@ struct WorkflowJobId {
 struct Secrets {
     #[clap(
         long = "auth_token",
-        short = "t",
+        short = 't',
         value_name = "PERSONAL_ACCESS_TOKEN",
         env = "GH_ACCESS_TOKEN",
         hide_env_values = true,
@@ -415,7 +415,7 @@ struct Secrets {
     auth_token: String,
     #[clap(
         long = "name",
-        short = "n",
+        short = 'n',
         value_name = "OWNER/NAME",
         about = "Repository address including the owner and name seperated by slash\nEg. aslamplr/gh-cli",
         display_order = 1,
