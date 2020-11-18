@@ -125,6 +125,11 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-
 
+    - name: Work around MacOS + Cargo + Github Actions cache bug
+      run: |
+        cargo clean --locked --release \
+                    -p serde_derive
+
     - name: Build
       run: cargo build --release --verbose
       env:
