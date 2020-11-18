@@ -29,7 +29,7 @@ clap = "3.0.0-beta.2"
 regex = "1"
 anyhow = "1.0"
 tokio = { version = "0.2", features = ["full"] }
-crossterm = "0.17"
+crossterm = "0.18"
 termimad = "0.8"
 lazy_static = "1.4.0"
 gh-lib = { path = "../gh-lib", default-features = false }
