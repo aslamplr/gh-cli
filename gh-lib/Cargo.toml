@@ -38,7 +38,7 @@ sodiumoxide = { version = "0.2.6", optional = true }
 
 [dev-dependencies]
 tokio = { version = "0.2", features = ["full"] }
-mockito = "0.27"
+mockito = "0.28"
 
 [build-dependencies]
 anyhow = "1.0"
